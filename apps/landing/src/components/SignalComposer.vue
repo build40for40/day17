@@ -25,6 +25,17 @@ const onlyGroup = computed(() => props.groups.length === 1)
 
 const isPicked = (id: string) => overrides.value.get(id) ?? (onlyGroup.value || (scores.value.get(id) ?? 0) >= MATCH_THRESHOLD)
 const pickedIds = computed(() => props.groups.map((group) => group.household.id).filter(isPicked))
+const reachText = computed(() => {
+  const phones = new Set(
+    props.groups
+      .filter((group) => isPicked(group.household.id))
+      .flatMap((group) => group.household.helpers.filter((helper) => !helper.optedOut).map((helper) => helper.phone)),
+  )
+  const picked = props.groups.filter((group) => isPicked(group.household.id))
+  if (picked.length === 0) return ''
+  const people = phones.size === 1 ? '1 person' : `${phones.size} people`
+  return picked.length === 1 ? `Goes to ${people} in ${picked[0]!.household.name}` : `Goes to ${people} across ${picked.length} groups`
+})
 const percent = (id: string) => (scores.value.has(id) ? `${Math.round(scores.value.get(id)! * 100)}%` : '')
 
 const hint = computed(() => {
@@ -122,7 +133,10 @@ async function send() {
         What do you need?
         <textarea v-model="text" rows="3" :maxlength="MAX_SIGNAL_LENGTH" placeholder="Can anyone grab Léa at 5?" data-test="text" />
       </label>
-      <p class="counter" :class="{ low: remaining < 30 }" data-test="counter">{{ remaining }} left</p>
+      <div class="compose-meta">
+        <p v-if="reachText" class="reach" data-test="reach">{{ reachText }}</p>
+        <p class="counter" :class="{ low: remaining < 30 }" data-test="counter">{{ remaining }} left</p>
+      </div>
 
       <fieldset v-if="!onlyGroup" class="picker">
         <legend>Who gets it</legend>

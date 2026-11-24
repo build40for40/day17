@@ -11,6 +11,7 @@ import {
   type HelperInput,
   type MeResponse,
   type RemoveHelperResponse,
+  type UpdateMeResponse,
 } from "contract";
 import {
   newId,
@@ -136,6 +137,51 @@ export const handleMe: Handler = async (request, env) => {
     groups,
     signalNumber: env.SIGNAL_NUMBER || null,
   } satisfies MeResponse);
+};
+
+export const handleUpdateMe: Handler = async (request, env) => {
+  const session = await requireSession(request, env);
+  if (session instanceof Response) return session;
+
+  const person = await findPerson(env, session.personId);
+  if (!person) return error("unauthorized", 401);
+
+  const body = await readJson(request);
+  if (!body.ok) return body.response;
+  const name = isRecord(body.data) ? cleanName(body.data.name) : null;
+  if (!name) return error("invalid_name", 400);
+
+  await env.DB.prepare("UPDATE people SET name = ? WHERE id = ?").bind(name, person.id).run();
+  return json({ person: { id: person.id, phone: person.phone, name } } satisfies UpdateMeResponse);
+};
+
+export const handleDeleteMe: Handler = async (request, env) => {
+  const session = await requireSession(request, env);
+  if (session instanceof Response) return session;
+
+  const person = await findPerson(env, session.personId);
+  if (!person) return error("unauthorized", 401);
+
+  await env.DB.batch([
+    env.DB.prepare(
+      "DELETE FROM households WHERE id IN (SELECT household_id FROM memberships WHERE person_id = ? AND role = 'owner')",
+    ).bind(person.id),
+    env.DB.prepare("DELETE FROM messages WHERE phone = ? AND household_id IS NULL").bind(person.phone),
+    env.DB.prepare("DELETE FROM verifications WHERE phone = ?").bind(person.phone),
+    env.DB.prepare("UPDATE people SET name = NULL WHERE id = ?").bind(person.id),
+    env.DB.prepare(
+      `DELETE FROM people WHERE id = ?1 AND opted_out_at IS NULL
+       AND NOT EXISTS (SELECT 1 FROM memberships WHERE person_id = ?1)`,
+    ).bind(person.id),
+  ]);
+
+  return noContent({ "Set-Cookie": clearSessionCookie() });
+};
+
+export const handleSignOut: Handler = async (request) => {
+  const body = await readJson(request);
+  if (!body.ok) return body.response;
+  return noContent({ "Set-Cookie": clearSessionCookie() });
 };
 
 export const handleCreateHousehold: Handler = async (request, env) => {

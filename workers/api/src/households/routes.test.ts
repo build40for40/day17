@@ -77,6 +77,74 @@ describe("GET /me", () => {
   });
 });
 
+describe("PATCH /me", () => {
+  it("needs a session", async () => {
+    expect((await call("PATCH", "/me", null, { name: "Sam" })).status).toBe(401);
+  });
+
+  it("changes the name a parent gave themselves", async () => {
+    const response = await call("PATCH", "/me", "parent", { name: "  Sam   Martin " });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ person: { id: "parent", phone: PARENT, name: "Sam Martin" } });
+    expect(((await (await call("GET", "/me", "parent")).json()) as any).person.name).toBe("Sam Martin");
+  });
+
+  it("refuses an empty name", async () => {
+    const response = await call("PATCH", "/me", "parent", { name: " " });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_name" });
+  });
+});
+
+describe("POST /sign-out", () => {
+  it("clears the session cookie and leaves the data alone", async () => {
+    await call("POST", "/households", "parent", valid());
+
+    const response = await call("POST", "/sign-out", "parent", {});
+    expect(response.status).toBe(204);
+    expect(response.headers.get("Set-Cookie")).toMatch(/^day17_session=;.*Max-Age=0/);
+    expect(await count("households")).toBe(1);
+  });
+});
+
+describe("DELETE /me", () => {
+  it("needs a session", async () => {
+    expect((await call("DELETE", "/me", null)).status).toBe(401);
+  });
+
+  it("deletes every group, its data and the parent, and signs them out", async () => {
+    await call("POST", "/households", "parent", valid());
+    await call("POST", "/households", "parent", { ...valid([{ name: "Coach", phone: NEIGHBOUR }]), householdName: "Football" });
+
+    const response = await call("DELETE", "/me", "parent");
+    expect(response.status).toBe(204);
+    expect(response.headers.get("Set-Cookie")).toMatch(/^day17_session=;.*Max-Age=0/);
+
+    expect(await count("households")).toBe(0);
+    expect(await count("memberships")).toBe(0);
+    expect(await count("messages")).toBe(0);
+    expect(await count("people")).toBe(0);
+  });
+
+  it("forgets someone who never made a group", async () => {
+    expect((await call("DELETE", "/me", "parent")).status).toBe(204);
+    expect(await count("people")).toBe(0);
+  });
+
+  it("keeps a nameless row for a parent who still helps someone else", async () => {
+    await addPerson("other", OTHER_PARENT, null);
+    await call("POST", "/households", "other", valid([{ name: "Sam next door", phone: PARENT }]));
+    await call("POST", "/households", "parent", valid());
+
+    expect((await call("DELETE", "/me", "parent")).status).toBe(204);
+
+    expect(await count("households")).toBe(1);
+    expect(await env.DB.prepare("SELECT name FROM people WHERE id = 'parent'").first()).toEqual({ name: null });
+    const { groups } = (await (await call("GET", "/me", "other")).json()) as any;
+    expect(groups[0].household.helpers.map((helper: any) => helper.name)).toEqual(["Sam next door"]);
+  });
+});
+
 describe("POST /households", () => {
   it("needs a session", async () => {
     expect((await call("POST", "/households", null, valid())).status).toBe(401);

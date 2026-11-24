@@ -5,7 +5,13 @@ import { MAX_SIGNAL_LENGTH, type RecipientState, type Signal, type SignalRecipie
 import { sendSignal, signOff, solveSignal } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
 
-const props = defineProps<{ householdId: string; groupName?: string; openSignal: Signal; recipients: SignalRecipient[] }>()
+const props = defineProps<{
+  householdId: string
+  openSignal: Signal
+  recipients: SignalRecipient[]
+  groupName?: string
+  reach?: number
+}>()
 const emit = defineEmits<{ changed: [signal: Signal | null]; expired: [] }>()
 
 const composing = ref(false)
@@ -14,6 +20,13 @@ const error = ref('')
 const busy = ref(false)
 
 const remaining = computed(() => MAX_SIGNAL_LENGTH - text.value.length)
+
+// Who a send will reach: everyone in this group who hasn't opted out.
+const reachText = computed(() => {
+  if (props.reach === undefined) return ''
+  const people = props.reach === 1 ? '1 person' : `${props.reach} people`
+  return props.groupName ? `Goes to ${people} in ${props.groupName}` : `Goes to ${people}`
+})
 
 const STATE_LABELS: Record<RecipientState, string> = {
   not_read: 'No reply yet',
@@ -96,7 +109,10 @@ const solve = () =>
           data-test="text"
         />
       </label>
-      <p class="counter" :class="{ low: remaining < 30 }" data-test="counter">{{ remaining }} left</p>
+      <div class="compose-meta">
+        <p v-if="reachText" class="reach" data-test="reach">{{ reachText }}</p>
+        <p class="counter" :class="{ low: remaining < 30 }" data-test="counter">{{ remaining }} left</p>
+      </div>
       <p v-if="error" class="error" role="alert" data-test="error">{{ error }}</p>
       <div class="row">
         <button class="primary" type="submit" :disabled="busy" data-test="send">

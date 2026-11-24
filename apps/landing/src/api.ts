@@ -1,13 +1,17 @@
 import {
   API_BASE,
+  type AddHelperResponse,
   type CreateHouseholdRequest,
   type CreateHouseholdResponse,
   type CreateSignalResponse,
   type ErrorCode,
   type MatchSignalResponse,
+  type HelperInput,
   type MeResponse,
+  type RemoveHelperResponse,
   type SignOffResponse,
   type SolveSignalResponse,
+  type UpdateMeResponse,
 } from 'contract'
 
 export class ApiError extends Error {
@@ -46,11 +50,26 @@ export const checkVerification = (phone: string, code: string) =>
 
 export const getMe = () => request<MeResponse>('GET', '/me')
 
+export const updateMe = (name: string) => request<UpdateMeResponse>('PATCH', '/me', { name })
+
+export const deleteMe = () => request<void>('DELETE', '/me')
+
+export const signOut = () => request<void>('POST', '/sign-out', {})
+
 export const createHousehold = (input: CreateHouseholdRequest) =>
   request<CreateHouseholdResponse>('POST', '/households', input)
 
 export const deleteHousehold = (householdId: string) =>
   request<void>('DELETE', `/households/mine?id=${encodeURIComponent(householdId)}`)
+
+export const addHelper = (householdId: string, helper: HelperInput) =>
+  request<AddHelperResponse>('POST', '/households/helpers', { householdId, ...helper })
+
+export const removeHelper = (householdId: string, personId: string) =>
+  request<RemoveHelperResponse>(
+    'DELETE',
+    `/households/helpers?personId=${encodeURIComponent(personId)}&id=${encodeURIComponent(householdId)}`,
+  )
 
 export const sendSignal = (householdIds: string[], text: string) =>
   request<CreateSignalResponse>('POST', '/signals', { householdIds, text })

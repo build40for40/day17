@@ -43,6 +43,21 @@ describe('App', () => {
     expect(wrapper.find('[data-test="delete"]').exists()).toBe(true)
   })
 
+  it('opens the profile page and comes back', async () => {
+    const household = { id: 'h1', name: 'The Martins', description: 'Family pickups', createdAt: '', helpers: [] }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(me(household))))
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('[data-test="profile"]').trigger('click')
+
+    expect(wrapper.get<HTMLInputElement>('[data-test="phone"]').element.value).toBe('+447700900001')
+    expect(wrapper.find('[data-test="delete"]').exists()).toBe(false)
+
+    await wrapper.get('[data-test="back"]').trigger('click')
+    expect(wrapper.find('[data-test="delete"]').exists()).toBe(true)
+  })
+
   it('moves from phone to code after the code is sent', async () => {
     const fetchMock = vi
       .fn()

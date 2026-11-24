@@ -91,6 +91,9 @@ export type MeResponse = {
   signalNumber: string | null;
 };
 
+export type UpdateMeRequest = { name: string };
+export type UpdateMeResponse = { person: Person };
+
 export type HelperInput = { name: string; phone: string };
 
 export type CreateHouseholdRequest = {
