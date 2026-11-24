@@ -4,6 +4,7 @@ import { MAX_HOUSEHOLDS, type MeResponse } from 'contract'
 
 import { deleteHousehold } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
+import { knownPeople } from '../people'
 import HelpersCard from './HelpersCard.vue'
 import SignalPanel from './SignalPanel.vue'
 
@@ -109,6 +110,7 @@ async function remove() {
       :key="group.household.id"
       :household="group.household"
       :also-in="alsoIn"
+      :known="knownPeople(props.me.groups)"
       @changed="emit('changed')"
       @expired="emit('expired')"
     />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { MAX_HELPERS, MAX_NAME_LENGTH, type HelperInput } from 'contract'
 
 import { createHousehold } from '../api'
@@ -7,13 +7,13 @@ import { isUnauthorized, messageFor } from '../errors'
 import PhoneField from './PhoneField.vue'
 import lanternThumbs from '../assets/lantern-thumbs.jpg'
 
-const props = defineProps<{ knownName?: string | null }>()
+const props = defineProps<{ knownName?: string | null; known?: HelperInput[] }>()
 const emit = defineEmits<{ created: [householdId: string]; expired: []; cancel: [] }>()
 
 const parentName = ref(props.knownName ?? '')
 const householdName = ref('')
 let nextId = 0
-const blankHelper = () => ({ id: nextId++, name: '', phone: '' })
+const blankHelper = (from: HelperInput = { name: '', phone: '' }) => ({ id: nextId++, ...from })
 const helpers = ref([blankHelper()])
 const error = ref('')
 const busy = ref(false)
@@ -22,6 +22,14 @@ const addHelper = () => {
   if (helpers.value.length < MAX_HELPERS) helpers.value.push(blankHelper())
 }
 const removeHelper = (index: number) => helpers.value.splice(index, 1)
+
+const pickable = computed(() => (props.known ?? []).filter((person) => !helpers.value.some((helper) => helper.phone === person.phone)))
+
+function pick(person: HelperInput) {
+  const blank = helpers.value.findIndex((helper) => !helper.name.trim() && !helper.phone)
+  if (blank >= 0) helpers.value.splice(blank, 1, blankHelper(person))
+  else if (helpers.value.length < MAX_HELPERS) helpers.value.push(blankHelper(person))
+}
 
 function validate(): { helpers: HelperInput[] } | string {
   if (!parentName.value.trim() || !householdName.value.trim()) return "Tell us your name and what the group is for."
@@ -79,6 +87,14 @@ async function submit() {
 
     <fieldset>
       <legend>Your people ({{ helpers.length }} of {{ MAX_HELPERS }})</legend>
+      <div v-if="pickable.length" class="known" data-test="known-people">
+        <span>From your other groups</span>
+        <div class="row">
+          <button v-for="person in pickable" :key="person.phone" class="pick" type="button" data-test="known-person" @click="pick(person)">
+            + {{ person.name }}
+          </button>
+        </div>
+      </div>
       <div v-for="(helper, index) in helpers" :key="helper.id" class="helper" data-test="helper-row">
         <input v-model="helper.name" placeholder="Name" aria-label="Helper name" :maxlength="MAX_NAME_LENGTH" />
         <PhoneField v-model="helper.phone" label="Helper phone" />
