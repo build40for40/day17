@@ -39,7 +39,7 @@ describe('GroupStep', () => {
     await fill(wrapper, [['Nan', 'nope']])
     await wrapper.get('form').trigger('submit')
 
-    expect(wrapper.get('[data-test="error"]').text()).toContain("doesn't look like a phone number")
+    expect(wrapper.get('[data-test="error"]').text()).toContain("doesn't look like a UK mobile number")
     expect(fetchMock).not.toHaveBeenCalled()
   })
 

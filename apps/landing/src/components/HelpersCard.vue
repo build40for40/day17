@@ -61,7 +61,7 @@ function add() {
     return
   }
   if (!phone.value) {
-    error.value = `${cleaned}'s number doesn't look like a phone number. Check the country code and the digits.`
+    error.value = `${cleaned}'s number doesn't look like a UK mobile number. Check the digits.`
     return
   }
   const already = props.household.helpers.find((helper) => helper.phone === phone.value)
