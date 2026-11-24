@@ -53,7 +53,7 @@ async function run(action: () => Promise<unknown>, done: () => void) {
 function add() {
   const cleaned = name.value.trim()
   if (!cleaned) {
-    error.value = 'Your helper needs a name.'
+    error.value = 'They need a name.'
     return
   }
   if (!phone.value) {
@@ -72,8 +72,8 @@ const remove = (helper: Helper) =>
 
 <template>
   <section class="card">
-    <h3>Your helpers ({{ props.household.helpers.length }} of {{ MAX_HELPERS }})</h3>
-    <p v-if="props.household.helpers.length === 0" class="muted">Nobody yet. A bat signal needs someone to see it.</p>
+    <h3>Your people ({{ props.household.helpers.length }} of {{ MAX_HELPERS }})</h3>
+    <p v-if="props.household.helpers.length === 0" class="muted">Nobody yet. Add someone who'd come running.</p>
     <ul class="helpers">
       <li v-for="helper in props.household.helpers" :key="helper.id" data-test="helper">
         <span>{{ helper.name }}</span>
@@ -106,7 +106,7 @@ const remove = (helper: Helper) =>
       <input v-model="name" placeholder="Name" aria-label="Helper name" :maxlength="MAX_NAME_LENGTH" data-test="helper-name" />
       <PhoneField v-model="phone" label="Helper phone" />
       <div class="row">
-        <button class="primary" type="submit" :disabled="busy">{{ busy ? 'Adding...' : 'Add helper' }}</button>
+        <button class="primary" type="submit" :disabled="busy">{{ busy ? 'Adding...' : 'Add them' }}</button>
         <button class="link" type="button" @click="stopAdding">Cancel</button>
       </div>
     </form>
@@ -117,7 +117,7 @@ const remove = (helper: Helper) =>
       data-test="add-helper"
       @click="startAdding"
     >
-      + Add a helper
+      + Add someone
     </button>
 
     <p v-if="error" class="error" role="alert" data-test="helper-error">{{ error }}</p>

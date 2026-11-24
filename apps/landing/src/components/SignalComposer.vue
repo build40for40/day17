@@ -105,7 +105,7 @@ async function send() {
     return
   }
   if (pickedIds.value.length === 0) {
-    error.value = 'Pick at least one group. A signal with nobody watching is just a lamp.'
+    error.value = 'Pick at least one group. A lantern needs someone to see it.'
     return
   }
   busy.value = true
@@ -128,15 +128,15 @@ async function send() {
     <template v-if="!composing">
       <div v-if="!groups.some((group) => group.openSignal)" class="card-head">
         <img class="lantern" :src="lanternSleep" alt="" data-test="lantern" />
-        <p class="muted">All quiet. Light the signal when you need your people.</p>
+        <p class="muted">All quiet. Light a lantern when you need a hand.</p>
       </div>
-      <button class="red" type="button" data-test="red-button" @click="composing = true">Send the signal</button>
+      <button class="red" type="button" data-test="red-button" @click="composing = true">Light a lantern</button>
     </template>
 
     <form v-else novalidate @submit.prevent="send">
       <label>
-        What do you need?
-        <textarea v-model="text" rows="3" :maxlength="MAX_SIGNAL_LENGTH" placeholder="Can anyone grab Léa at 5?" data-test="text" />
+        What do you need, and when?
+        <textarea v-model="text" rows="3" :maxlength="MAX_SIGNAL_LENGTH" placeholder="Can anyone grab Léa from school at 5?" data-test="text" />
       </label>
       <div class="compose-meta">
         <p v-if="reachText" class="reach" data-test="reach">{{ reachText }}</p>
@@ -165,7 +165,7 @@ async function send() {
 
       <p v-if="error" class="error" role="alert" data-test="error">{{ error }}</p>
       <div class="row">
-        <button class="primary" type="submit" :disabled="busy || pickedIds.length === 0" data-test="send">Send it</button>
+        <button class="primary" type="submit" :disabled="busy || pickedIds.length === 0" data-test="send">Light it</button>
         <button class="link" type="button" @click="close">Cancel</button>
       </div>
     </form>

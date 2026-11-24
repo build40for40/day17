@@ -81,7 +81,7 @@ const solve = () =>
       <img class="lantern" :src="lantern" alt="" data-test="lantern" />
       <div>
         <p class="eyebrow" data-test="stage">
-          <template v-if="groupName">{{ groupName }}: </template>{{ onIt ? `${onIt.name} is on it` : 'Signal is up' }}
+          <template v-if="groupName">{{ groupName }}: </template>{{ onIt ? `${onIt.name} is on it` : 'Lantern lit' }}
         </p>
         <p class="ask" data-test="open-text">{{ openSignal.text }}</p>
       </div>
@@ -102,7 +102,7 @@ const solve = () =>
         </button>
       </li>
     </ul>
-    <button class="solved" type="button" :disabled="busy" data-test="solve" @click="solve">Solved</button>
+    <button class="solved" type="button" :disabled="busy" data-test="solve" @click="solve">Sorted</button>
 
     <button v-if="!composing" class="link" type="button" data-test="update" @click="composing = true">
       Send an update
@@ -110,7 +110,7 @@ const solve = () =>
 
     <form v-if="composing" novalidate @submit.prevent="send">
       <label>
-        What is the update?
+        What's the update?
         <textarea
           v-model="text"
           rows="3"

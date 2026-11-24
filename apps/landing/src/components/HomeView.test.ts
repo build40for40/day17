@@ -84,7 +84,7 @@ describe('HomeView', () => {
     const wrapper = mount(HomeView, { props: { me: me(null, [family, { ...football, openSignal: signal }]) } })
 
     expect(wrapper.findAll('[data-test="red-button"]')).toHaveLength(1)
-    expect(wrapper.findAll('[data-test="stage"]').map((stage) => stage.text())).toEqual(['Football: Signal is up'])
+    expect(wrapper.findAll('[data-test="stage"]').map((stage) => stage.text())).toEqual(['Football: Lantern lit'])
   })
 
   it('jumps to a group that was just added', async () => {

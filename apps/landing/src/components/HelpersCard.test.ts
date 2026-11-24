@@ -45,7 +45,7 @@ describe('HelpersCard', () => {
 
     await wrapper.get('[data-test="add-helper"]').trigger('click')
     await wrapper.get('[data-test="add-helper-form"]').trigger('submit')
-    expect(wrapper.get('[data-test="helper-error"]').text()).toContain('needs a name')
+    expect(wrapper.get('[data-test="helper-error"]').text()).toContain('need a name')
 
     await wrapper.get('[data-test="helper-name"]').setValue('Nan')
     await wrapper.get('[data-test="add-helper-form"]').trigger('submit')
