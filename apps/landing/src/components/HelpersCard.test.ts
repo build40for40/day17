@@ -9,6 +9,7 @@ afterEach(() => vi.unstubAllGlobals())
 const household = (count = 1): Household => ({
   id: 'h1',
   name: 'The Martins',
+  description: 'Family pickups',
   createdAt: '',
   helpers: Array.from({ length: count }, (_, index) => ({
     id: `p${index}`,

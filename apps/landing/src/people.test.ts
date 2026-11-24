@@ -4,7 +4,7 @@ import type { Group, Helper } from 'contract'
 import { knownPeople } from './people'
 
 const group = (id: string, helpers: Helper[]): Group => ({
-  household: { id, name: id, createdAt: '', helpers },
+  household: { id, name: id, description: '', createdAt: '', helpers },
   openSignal: null,
   recipients: [],
 })

@@ -6,16 +6,16 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('api client', () => {
   it('calls the versioned base path with credentials and a JSON body', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(Response.json({ signal: {} }, { status: 201 }))
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ signals: [] }, { status: 201 }))
     vi.stubGlobal('fetch', fetchMock)
 
-    await sendSignal('h1', 'help')
+    await sendSignal(['h1'], 'help')
 
     expect(fetchMock).toHaveBeenCalledWith('/day17/api/v1/signals', {
       method: 'POST',
       credentials: 'include',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ householdId: 'h1', text: 'help' }),
+      body: JSON.stringify({ householdIds: ['h1'], text: 'help' }),
     })
   })
 

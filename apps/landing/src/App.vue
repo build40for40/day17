@@ -10,7 +10,10 @@ import PhoneStep from './components/PhoneStep.vue'
 import ProfileView from './components/ProfileView.vue'
 import { messageFor } from './errors'
 import { knownPeople } from './people'
-import lanternHug from './assets/lantern-hug.jpg'
+import scenePickup from './assets/scene-pickup.jpg'
+import sceneBabysitting from './assets/scene-babysitting.jpg'
+import sceneGp from './assets/scene-gp.jpg'
+import scenePharmacy from './assets/scene-pharmacy.jpg'
 
 type Step = 'loading' | 'phone' | 'code' | 'group' | 'home'
 
@@ -76,30 +79,52 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main>
+  <main :class="{ wide: step === 'phone' || step === 'code' }">
     <div class="top">
       <p class="day">40 for 40, Day 17</p>
       <button v-if="me && !onProfile" class="link" type="button" data-test="profile" @click="showProfile(true)">
         My profile
       </button>
     </div>
-    <h1>Light a lantern when you need a hand.</h1>
-
-    <template v-if="step === 'phone' || step === 'code'">
-      <div class="welcome-lantern"><img class="lantern" :src="lanternHug" alt="A paper lantern hugging a small child" /></div>
+    <div v-if="step === 'phone' || step === 'code'" class="welcome">
+      <h1>Light a lantern when you need a hand.</h1>
       <p class="pitch">
         Stuck at work at pickup time. The babysitter cancelled. Light a lantern and everyone you trust gets a text at
         once. No app to install, and it works on grandma's phone too.
       </p>
+
+      <ul class="scenes" aria-label="What people use it for">
+        <li><img :src="scenePickup" alt="A paper lantern walking a girl out of the school gate" /><span>School pickup</span></li>
+        <li><img :src="sceneBabysitting" alt="A paper lantern reading a bedtime story to a sleepy boy" /><span>Babysitting</span></li>
+        <li><img :src="sceneGp" alt="A paper lantern walking a boy into the doctor's surgery" /><span>GP visit</span></li>
+        <li><img :src="scenePharmacy" alt="A paper lantern collecting medicine at the pharmacy" /><span>Pharmacy</span></li>
+      </ul>
+
+      <section class="how" aria-labelledby="how-h">
+        <h2 id="how-h">How it works</h2>
+        <ol>
+          <li><b>Make a group.</b> School pickup, babysitting, a trip to the GP. Add the people you'd call.</li>
+          <li><b>Light a lantern.</b> Say what you need and when. We tick the right group, and everyone in it gets a text at once.</li>
+          <li><b>Someone says they're on it.</b> You see who, and mark it sorted.</li>
+        </ol>
+        <p class="tip">One ask per lantern: "Can anyone grab Léa from school at 5?"</p>
+      </section>
+
+      <div class="welcome-form">
+        <p v-if="loadError" class="error" role="alert" data-test="load-error">{{ loadError }}</p>
+        <PhoneStep v-if="step === 'phone'" @sent="(p) => { phone = p; step = 'code' }" />
+        <CodeStep v-else :phone="phone" @verified="load" @back="step = 'phone'" />
+      </div>
+    </div>
+
+    <template v-else>
+      <h1>Light a lantern when you need a hand.</h1>
+      <p v-if="step === 'loading'" class="muted" data-test="loading">Lighting the lantern...</p>
+      <p v-if="loadError" class="error" role="alert" data-test="load-error">{{ loadError }}</p>
     </template>
 
-    <p v-if="step === 'loading'" class="muted" data-test="loading">Lighting the lantern...</p>
-    <p v-if="loadError" class="error" role="alert" data-test="load-error">{{ loadError }}</p>
-
-    <PhoneStep v-if="step === 'phone'" @sent="(p) => { phone = p; step = 'code' }" />
-    <CodeStep v-else-if="step === 'code'" :phone="phone" @verified="load" @back="step = 'phone'" />
     <ProfileView
-      v-else-if="me && onProfile"
+      v-if="me && onProfile"
       :person="me.person"
       @saved="refresh"
       @signed-out="signedOut"

@@ -1,4 +1,4 @@
-import { MAX_HELPERS, MAX_SIGNALS_PER_DAY, MAX_SIGNAL_LENGTH, type ErrorCode } from 'contract'
+import { MAX_DESCRIPTION_LENGTH, MAX_HELPERS, MAX_SIGNALS_PER_DAY, MAX_SIGNAL_LENGTH, type ErrorCode } from 'contract'
 
 import { ApiError } from './api'
 
@@ -10,6 +10,7 @@ export const errorMessages: Record<ErrorCode | 'network', string> = {
   unsupported_media_type: 'Something went sideways on our end. Give it another go.',
   invalid_phone: "That number doesn't look right. Check the country code and the digits.",
   invalid_name: 'Everyone needs a name, and not a novel. Keep it short.',
+  invalid_description: `Say what the group is for, in under ${MAX_DESCRIPTION_LENGTH} characters.`,
   invalid_code: "That code doesn't match. Have another look at the text.",
   turnstile_failed: "We couldn't tell you apart from a robot. Refresh and try again.",
   rate_limited: "That's a lot in a short time. Wait a bit and try again.",
@@ -23,6 +24,7 @@ export const errorMessages: Record<ErrorCode | 'network', string> = {
   signal_too_long: `Keep it under ${MAX_SIGNAL_LENGTH} characters. Short asks get quicker answers.`,
   too_many_signals: `That's ${MAX_SIGNALS_PER_DAY} lanterns in 24 hours. Try again later, or just call someone.`,
   no_open_signal: "There's no lantern lit right now.",
+  classifier_unavailable: "We couldn't guess the groups this time. Pick them yourself.",
   not_accepted: "They haven't said they can help yet, so there's nothing to confirm.",
   not_found: "We couldn't find that.",
   method_not_allowed: 'Something went sideways on our end. Give it another go.',

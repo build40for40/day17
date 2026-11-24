@@ -6,6 +6,7 @@ import { deleteHousehold } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
 import { knownPeople } from '../people'
 import HelpersCard from './HelpersCard.vue'
+import SignalComposer from './SignalComposer.vue'
 import SignalPanel from './SignalPanel.vue'
 
 const props = defineProps<{ me: MeResponse; startAt?: string }>()
@@ -15,6 +16,7 @@ const selectedId = ref(props.startAt ?? props.me.groups[0]?.household.id ?? '')
 const confirming = ref(false)
 const error = ref('')
 
+const live = computed(() => props.me.groups.filter((g) => g.openSignal))
 const group = computed(() => props.me.groups.find((g) => g.household.id === selectedId.value) ?? props.me.groups[0])
 
 // The same person can be in several of a parent's groups, matched by phone number.
@@ -29,7 +31,6 @@ const alsoIn = computed(() => {
   return map
 })
 
-const reach = computed(() => group.value?.household.helpers.filter((h) => !h.optedOut).length ?? 0)
 
 watch(
   () => props.me.groups.map((g) => g.household.id),
@@ -62,6 +63,25 @@ async function remove() {
 
 <template>
   <div v-if="group">
+    <section v-if="props.me.signalNumber" class="card">
+      <h3>Your number to text</h3>
+      <p class="number" data-test="number">{{ props.me.signalNumber }}</p>
+    </section>
+
+    <SignalComposer :groups="props.me.groups" @changed="emit('changed')" @expired="emit('expired')" />
+
+    <SignalPanel
+      v-for="g in live"
+      :key="g.household.id"
+      :household-id="g.household.id"
+      :group-name="props.me.groups.length > 1 ? g.household.name : undefined"
+      :open-signal="g.openSignal!"
+      :recipients="g.recipients"
+      :reach="g.household.helpers.filter((h) => !h.optedOut).length"
+      @changed="emit('changed')"
+      @expired="emit('expired')"
+    />
+
     <nav class="groups" aria-label="Your groups">
       <template v-if="props.me.groups.length > 1">
         <button
@@ -89,22 +109,7 @@ async function remove() {
     </nav>
 
     <h2 class="group" data-test="group-name">{{ group.household.name }}</h2>
-
-    <section v-if="props.me.signalNumber" class="card">
-      <h3>Your number to text</h3>
-      <p class="number" data-test="number">{{ props.me.signalNumber }}</p>
-    </section>
-
-    <SignalPanel
-      :key="group.household.id"
-      :household-id="group.household.id"
-      :open-signal="group.openSignal"
-      :recipients="group.recipients"
-      :group-name="group.household.name"
-      :reach="reach"
-      @changed="emit('changed')"
-      @expired="emit('expired')"
-    />
+    <p v-if="group.household.description" class="muted" data-test="group-description">{{ group.household.description }}</p>
 
     <HelpersCard
       :key="group.household.id"

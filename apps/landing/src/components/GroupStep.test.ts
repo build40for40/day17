@@ -9,6 +9,7 @@ afterEach(() => vi.unstubAllGlobals())
 async function fill(wrapper: ReturnType<typeof mount>, helpers: [string, string][]) {
   await wrapper.get('[data-test="parent-name"]').setValue('Sam')
   await wrapper.get('[data-test="group-name"]').setValue('The Martins')
+  await wrapper.get('[data-test="group-description"]').setValue('Family pickups')
   for (let i = 1; i < helpers.length; i++) await wrapper.get('[data-test="add"]').trigger('click')
   const rows = wrapper.findAll('[data-test="helper-row"]')
   for (const [i, [name, phone]] of helpers.entries()) {
@@ -66,6 +67,7 @@ describe('GroupStep', () => {
     expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({
       parentName: 'Sam',
       householdName: 'The Martins',
+      description: 'Family pickups',
       helpers: [{ name: 'Nan', phone: '+447700900111' }],
     })
     expect(wrapper.emitted('created')).toEqual([['h1']])
@@ -96,6 +98,7 @@ describe('GroupStep', () => {
     expect(wrapper.findAll('[data-test="known-person"]').map((pick) => pick.text())).toEqual(['+ Sue'])
 
     await wrapper.get('[data-test="group-name"]').setValue('Football')
+    await wrapper.get('[data-test="group-description"]').setValue('Saturday matches')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
 

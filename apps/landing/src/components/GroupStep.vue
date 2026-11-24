@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { MAX_HELPERS, MAX_NAME_LENGTH, type HelperInput } from 'contract'
+import { MAX_DESCRIPTION_LENGTH, MAX_HELPERS, MAX_NAME_LENGTH, type HelperInput } from 'contract'
 
 import { createHousehold } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
@@ -12,6 +12,7 @@ const emit = defineEmits<{ created: [householdId: string]; expired: []; cancel: 
 
 const parentName = ref(props.knownName ?? '')
 const householdName = ref('')
+const description = ref('')
 let nextId = 0
 const blankHelper = (from: HelperInput = { name: '', phone: '' }) => ({ id: nextId++, ...from })
 const helpers = ref([blankHelper()])
@@ -33,6 +34,7 @@ function pick(person: HelperInput) {
 
 function validate(): { helpers: HelperInput[] } | string {
   if (!parentName.value.trim() || !householdName.value.trim()) return "Tell us your name and what the group is for."
+  if (!description.value.trim()) return 'Say when you would use it, so we can tell which asks belong to it.'
   if (helpers.value.length === 0) return 'Add at least one person. A lantern needs someone to see it.'
   const cleaned: HelperInput[] = []
   for (const helper of helpers.value) {
@@ -57,6 +59,7 @@ async function submit() {
     const { household } = await createHousehold({
       parentName: parentName.value.trim(),
       householdName: householdName.value.trim(),
+      description: description.value.trim(),
       helpers: result.helpers,
     })
     emit('created', household.id)
@@ -83,6 +86,17 @@ async function submit() {
     <label>
       What's this group for?
       <input v-model="householdName" placeholder="School pickup" :maxlength="MAX_NAME_LENGTH" data-test="group-name" />
+    </label>
+    <label>
+      When would you use it?
+      <textarea
+        v-model="description"
+        rows="2"
+        placeholder="Getting Léa to and from school, and looking after her when we're stuck"
+        :maxlength="MAX_DESCRIPTION_LENGTH"
+        data-test="group-description"
+      />
+      <span class="muted hint">We read this to work out which group a lantern is for.</span>
     </label>
 
     <fieldset>
