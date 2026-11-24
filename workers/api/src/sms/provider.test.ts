@@ -13,6 +13,11 @@ describe("getProvider", () => {
     expect(() => getProvider({ ...env, ALLOW_FAKE_SMS: "false" })).toThrow(/ALLOW_FAKE_SMS/);
   });
 
+  it("uses Textbelt when it's chosen and has its key", () => {
+    expect(getProvider({ ...env, SMS_PROVIDER: "textbelt", TEXTBELT_KEY: "fake-key" })).toBeDefined();
+    expect(() => getProvider({ ...env, SMS_PROVIDER: "textbelt", TEXTBELT_KEY: undefined })).toThrow(/TEXTBELT_KEY/);
+  });
+
   it("refuses a provider it doesn't know", () => {
     expect(() => getProvider({ ...env, SMS_PROVIDER: "carrier-pigeon" })).toThrow(/carrier-pigeon/);
   });

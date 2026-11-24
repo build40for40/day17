@@ -10,6 +10,7 @@ export default defineConfig({
       wrangler: { configPath: "./wrangler.jsonc" },
       miniflare: {
         bindings: {
+          SMS_PROVIDER: "fake",
           ALLOW_FAKE_SMS: "true",
           TEST_MIGRATIONS: await readD1Migrations(path.join(import.meta.dirname, "migrations")),
         },
