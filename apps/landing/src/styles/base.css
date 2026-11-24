@@ -82,7 +82,8 @@ h3 {
   margin: 0;
 }
 
-label {
+label,
+.field {
   display: grid;
   gap: 0.25rem;
   font-size: 0.875rem;
@@ -90,6 +91,7 @@ label {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   min-width: 0;
@@ -102,6 +104,7 @@ textarea {
 }
 
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible,
 button:focus-visible {
   outline: 3px solid var(--signal);
@@ -126,8 +129,19 @@ legend {
 
 .helper {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
+}
+
+.phone-field {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+  font-weight: 400;
+}
+
+.phone-field select {
+  width: auto;
+  font-variant-numeric: tabular-nums;
 }
 
 .helper .link {

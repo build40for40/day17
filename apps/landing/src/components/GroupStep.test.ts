@@ -47,7 +47,7 @@ describe('GroupStep', () => {
 
     await fill(wrapper, [
       ['Nan', '07700 900111'],
-      ['Gran', '+447700900111'],
+      ['Gran', '7700 900111'],
     ])
     await wrapper.get('form').trigger('submit')
 

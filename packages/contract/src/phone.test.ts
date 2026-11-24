@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { isE164, normalisePhone } from "./phone";
+import { composePhone, countryOf, isE164, normalisePhone } from "./phone";
 
 describe("normalisePhone", () => {
   it.each([
     ["+447700900123", "+447700900123"],
     ["+44 7700 900123", "+447700900123"],
     ["+44 (0)7700 900123", "+447700900123"],
-    ["07700 900123", "+447700900123"],
-    ["07700-900-123", "+447700900123"],
-    ["  (07700) 900.123  ", "+447700900123"],
+    ["  +44 (07700) 900.123  ", "+447700900123"],
+    ["+33 (0)6 12 34 56 78", "+33612345678"],
     ["0044 7700 900123", "+447700900123"],
     ["+33 6 12 34 56 78", "+33612345678"],
   ])("turns %j into %s", (input, expected) => {
@@ -19,6 +18,8 @@ describe("normalisePhone", () => {
     "",
     "   ",
     "7700900123",
+    "07700 900123",
+    "06 12 34 56 78",
     "+0123456789",
     "+1234567",
     "+1234567890123456",
@@ -39,5 +40,31 @@ describe("isE164", () => {
     expect(isE164("+123456789012345")).toBe(true);
     expect(isE164("+1234567")).toBe(false);
     expect(isE164("447700900123")).toBe(false);
+  });
+});
+
+describe("composePhone", () => {
+  it.each([
+    ["44", "7700 900123", "+447700900123"],
+    ["44", "07700 900123", "+447700900123"],
+    ["33", "06 12 34 56 78", "+33612345678"],
+    ["44", "+33 6 12 34 56 78", "+33612345678"],
+  ])("joins +%s and %j into %s", (dial, national, expected) => {
+    expect(composePhone(dial, national)).toBe(expected);
+  });
+
+  it.each([
+    ["44", ""],
+    ["44", "nope"],
+    ["1", "202 555 0123"],
+  ])("rejects +%s and %j", (dial, national) => {
+    expect(composePhone(dial, national)).toBeNull();
+  });
+});
+
+describe("countryOf", () => {
+  it("finds the country from the dial code", () => {
+    expect(countryOf("+33612345678")?.iso).toBe("FR");
+    expect(countryOf("+12025550123")).toBeNull();
   });
 });
