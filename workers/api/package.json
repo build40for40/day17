@@ -5,17 +5,21 @@
   "description": "The day17 api Worker.",
   "type": "module",
   "scripts": {
-    "dev": "pnpm wrangler dev --port 8787",
+    "dev": "pnpm migrate && pnpm wrangler dev --port 8787 --var ALLOW_FAKE_SMS:true",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "types": "wrangler types --env-interface Env",
+    "types": "wrangler types --env-interface Env --strict-vars false",
     "deploy": "pnpm wrangler deploy",
-    "wrangler": "env -u CLOUDFLARE_API_KEY -u CLOUDFLARE_EMAIL wrangler --profile 40for40"
+    "wrangler": "env -u CLOUDFLARE_API_KEY -u CLOUDFLARE_EMAIL wrangler --profile 40for40",
+    "migrate": "pnpm wrangler d1 migrations apply day17 --local"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.6.0",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0",
     "wrangler": "^4.158.0"
+  },
+  "dependencies": {
+    "contract": "workspace:*"
   }
 }

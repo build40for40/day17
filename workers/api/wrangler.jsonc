@@ -10,5 +10,14 @@
   ],
   "workers_dev": false,
   "preview_urls": false,
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "day17", "database_id": "efc1fd96-d5d1-43cb-af68-beed69ab97c1", "migrations_dir": "migrations" }
+  ],
+  "triggers": { "crons": ["0 * * * *"] },
+  "vars": {
+    "SMS_PROVIDER": "fake",
+    "SIGNAL_NUMBER": ""
+  },
+  "secrets": { "required": ["SESSION_SECRET"] }
 }

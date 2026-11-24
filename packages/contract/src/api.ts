@@ -1,0 +1,88 @@
+export type ErrorCode =
+  | "invalid_json"
+  | "invalid_request"
+  | "payload_too_large"
+  | "unsupported_media_type"
+  | "invalid_phone"
+  | "invalid_name"
+  | "invalid_code"
+  | "turnstile_failed"
+  | "rate_limited"
+  | "too_many_attempts"
+  | "unauthorized"
+  | "forbidden"
+  | "already_has_household"
+  | "no_household"
+  | "too_many_helpers"
+  | "duplicate_helper"
+  | "signal_too_long"
+  | "too_many_signals"
+  | "no_open_signal"
+  | "not_found"
+  | "method_not_allowed"
+  | "not_implemented"
+  | "internal_error";
+
+export type ErrorResponse = { error: ErrorCode };
+export type OkResponse = { ok: true };
+
+export type SignalStatus = "open" | "solved";
+export type SignalSource = "sms" | "web";
+export type MembershipRole = "owner" | "helper";
+
+export type Person = {
+  id: string;
+  phone: string;
+  name: string | null;
+};
+
+export type Helper = {
+  id: string;
+  name: string;
+  phone: string;
+  optedOut: boolean;
+};
+
+export type Household = {
+  id: string;
+  name: string;
+  createdAt: string;
+  helpers: Helper[];
+};
+
+export type Signal = {
+  id: string;
+  householdId: string;
+  text: string;
+  source: SignalSource;
+  status: SignalStatus;
+  openedAt: string;
+  solvedAt: string | null;
+};
+
+export type VerifyStartRequest = { phone: string; turnstileToken?: string };
+export type VerifyStartResponse = OkResponse;
+
+export type VerifyCheckRequest = { phone: string; code: string };
+export type VerifyCheckResponse = OkResponse;
+
+export type MeResponse = {
+  person: Person;
+  household: Household | null;
+  openSignal: Signal | null;
+  signalNumber: string | null;
+};
+
+export type HelperInput = { name: string; phone: string };
+
+export type CreateHouseholdRequest = {
+  parentName: string;
+  householdName: string;
+  helpers: HelperInput[];
+};
+export type CreateHouseholdResponse = { household: Household };
+
+export type CreateSignalRequest = { text: string };
+export type CreateSignalResponse = { signal: Signal };
+
+export type SolveSignalResponse = { signal: Signal };
