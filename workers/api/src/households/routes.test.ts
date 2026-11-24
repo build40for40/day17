@@ -1,7 +1,7 @@
 import { createExecutionContext } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
-import { MAX_HOUSEHOLDS } from "contract";
-import { MAX_HOUSEHOLDS_PER_DAY } from "../limits";
+import { MAX_HELPERS, MAX_HOUSEHOLDS } from "contract";
+import { MAX_HELPER_ADDS_PER_DAY, MAX_HOUSEHOLDS_PER_DAY } from "../limits";
 import worker from "../index";
 import { beforeEach, describe, expect, it } from "vitest";
 import { clearDatabase } from "../../test/db";
@@ -316,6 +316,110 @@ describe("DELETE /households/mine", () => {
 
     await call("DELETE", "/households/mine", "parent");
 
+    expect(await count("memberships")).toBe(2);
+  });
+});
+
+describe("POST /households/helpers", () => {
+  const groupId = async () => ((await (await call("GET", "/me", "parent")).json()) as any).groups[0].household.id as string;
+
+  it("needs a session", async () => {
+    expect((await call("POST", "/households/helpers", null, { name: "Nan", phone: NEIGHBOUR })).status).toBe(401);
+  });
+
+  it("adds a helper to the group and texts them a welcome", async () => {
+    await call("POST", "/households", "parent", valid());
+    clearFakeOutbox();
+
+    const response = await call("POST", "/households/helpers", "parent", { name: " Nan ", phone: "+44 7700 900003" });
+
+    expect(response.status).toBe(201);
+    const { household } = (await response.json()) as any;
+    expect(household.helpers.map((helper: any) => [helper.name, helper.phone])).toEqual([
+      ["Gran", GRAN],
+      ["Nan", NEIGHBOUR],
+    ]);
+    expect(fakeOutbox().map((sms) => sms.to)).toEqual([NEIGHBOUR]);
+  });
+
+  it("refuses a number already in the group and the parent's own", async () => {
+    await call("POST", "/households", "parent", valid());
+    const add = async (phone: string) => (await (await call("POST", "/households/helpers", "parent", { name: "Nan", phone })).json()) as any;
+
+    expect((await add(GRAN)).error).toBe("duplicate_helper");
+    expect((await add(PARENT)).error).toBe("duplicate_helper");
+  });
+
+  it("refuses an eleventh helper", async () => {
+    const add = async (phone: string) => (await (await call("POST", "/households/helpers", "parent", { name: "Nan", phone })).json()) as any;
+    const ten = Array.from({ length: MAX_HELPERS }, (_, index) => ({ name: `Helper ${index}`, phone: `+4477009001${String(index).padStart(2, "0")}` }));
+    await call("POST", "/households", "parent", valid(ten));
+    expect((await add(NEIGHBOUR)).error).toBe("too_many_helpers");
+  });
+
+  it("needs a group id once the parent owns several, and won't touch someone else's", async () => {
+    await call("POST", "/households", "parent", valid());
+    await call("POST", "/households", "parent", { ...valid([]), householdName: "Football" });
+    await addPerson("other", OTHER_PARENT, null);
+    await call("POST", "/households", "other", valid([]));
+    const theirs = ((await (await call("GET", "/me", "other")).json()) as any).groups[0].household.id;
+
+    expect((await call("POST", "/households/helpers", "parent", { name: "Nan", phone: NEIGHBOUR })).status).toBe(400);
+    expect((await call("POST", "/households/helpers", "parent", { name: "Nan", phone: NEIGHBOUR, householdId: theirs })).status).toBe(404);
+    expect((await call("POST", "/households/helpers", "parent", { name: "Nan", phone: NEIGHBOUR, householdId: await groupId() })).status).toBe(201);
+  });
+
+  it(`caps a parent at ${MAX_HELPER_ADDS_PER_DAY} added helpers a day, even when they remove in between`, async () => {
+    await call("POST", "/households", "parent", valid([]));
+    for (let index = 0; index < MAX_HELPER_ADDS_PER_DAY; index++) {
+      const response = await call("POST", "/households/helpers", "parent", { name: "Nan", phone: NEIGHBOUR });
+      const id = ((await response.json()) as any).household.helpers[0].id;
+      await call("DELETE", `/households/helpers?personId=${id}`, "parent");
+    }
+
+    expect((await call("POST", "/households/helpers", "parent", { name: "Nan", phone: NEIGHBOUR })).status).toBe(429);
+  });
+});
+
+describe("DELETE /households/helpers", () => {
+  const helpers = async (personId = "parent") => ((await (await call("GET", "/me", personId)).json()) as any).groups[0].household.helpers as any[];
+
+  it("needs a session", async () => {
+    expect((await call("DELETE", "/households/helpers?personId=x", null)).status).toBe(401);
+  });
+
+  it("removes the helper, their texts and their place on the open signal, and forgets them", async () => {
+    await call("POST", "/households", "parent", valid([{ name: "Gran", phone: GRAN }, { name: "Nan", phone: NEIGHBOUR }]));
+    await call("POST", "/signals", "parent", { text: "Pickup at 5" });
+    const gran = (await helpers()).find((helper) => helper.phone === GRAN);
+
+    const response = await call("DELETE", `/households/helpers?personId=${gran.id}`, "parent");
+
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as any).household.helpers.map((helper: any) => helper.phone)).toEqual([NEIGHBOUR]);
+    const left = async (sql: string) => (await env.DB.prepare(sql).bind(GRAN).first<{ n: number }>())!.n;
+    expect(await left("SELECT COUNT(*) AS n FROM people WHERE phone = ?")).toBe(0);
+    expect(await left("SELECT COUNT(*) AS n FROM messages WHERE phone = ?")).toBe(0);
+    expect(await left("SELECT COUNT(*) AS n FROM signal_recipients r JOIN people p ON p.id = r.person_id WHERE p.phone = ?")).toBe(0);
+  });
+
+  it("keeps a helper who is still in another group", async () => {
+    await call("POST", "/households", "parent", valid());
+    await addPerson("other", OTHER_PARENT, null);
+    await call("POST", "/households", "other", valid());
+    const gran = (await helpers())[0];
+
+    await call("DELETE", `/households/helpers?personId=${gran.id}`, "parent");
+
+    expect(await helpers()).toEqual([]);
+    expect((await helpers("other")).map((helper) => helper.phone)).toEqual([GRAN]);
+  });
+
+  it("404s for someone who isn't a helper in the group, the parent included", async () => {
+    await call("POST", "/households", "parent", valid());
+
+    expect((await call("DELETE", "/households/helpers?personId=parent", "parent")).status).toBe(404);
+    expect((await call("DELETE", "/households/helpers?personId=nobody", "parent")).status).toBe(404);
     expect(await count("memberships")).toBe(2);
   });
 });
