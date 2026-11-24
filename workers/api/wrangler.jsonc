@@ -16,7 +16,7 @@
   ],
   "triggers": { "crons": ["0 * * * *"] },
   "vars": {
-    "SMS_PROVIDER": "fake",
+    "SMS_PROVIDER": "textbelt",
     "SIGNAL_NUMBER": ""
   },
   "secrets": { "required": ["SESSION_SECRET"] }

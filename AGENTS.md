@@ -10,7 +10,7 @@ Day 17 of 40 for 40, built live on Twitch on Tuesday 24 November 2026. The probl
 A pnpm workspace. Install with `pnpm install` from the root, and add dependencies with `pnpm --filter <package> add <dep>`.
 
 - **`apps/landing`:** the landing page, Vue 3 and Vite, built into `dist/day17/` and served as static assets by the `day17` Worker at `build40for40.com/day17/`.
-- **`workers/api`:** the `day17-api` Worker at `build40for40.com/day17/api`, with every route under `/day17/api/v1`. Its routes are more specific than the landing page's, so they win. Code is split by feature: `verify/` (SMS code sign-in), `households/` (`/me`, sign-up, delete), `signals/` (the red button, inbound SMS routing and the hourly cron) and `sms/` (the provider interface, the fake provider and every system text).
+- **`workers/api`:** the `day17-api` Worker at `build40for40.com/day17/api`, with every route under `/day17/api/v1`. Its routes are more specific than the landing page's, so they win. Code is split by feature: `verify/` (SMS code sign-in), `households/` (`/me`, sign-up, delete), `signals/` (the red button, inbound SMS routing and the hourly cron) and `sms/` (the provider interface, the fake and Textbelt providers and every system text).
 - **`packages/contract`:** shared request and response types, error codes, limits and the `normalisePhone` helper, imported as `contract` by both the landing page and the API. Its `exports` point at the TypeScript source, so there's no build step.
 - **`workers/*` and `packages/*`:** new Workers and shared code go here, one folder each. A new Worker needs its own `wrangler` script, the account's `account_id`, and a deploy step in CI.
 
@@ -46,11 +46,23 @@ One workflow, `.github/workflows/ci.yml`, built from the shared `build40for40/ac
 
 - **`SESSION_SECRET`:** required secret. It signs the `day17_session` cookie and hashes sign-in codes.
 - **`TURNSTILE_SECRET`:** optional secret. When it's set, `/verify/start` checks a Turnstile token. When it isn't, the check is skipped.
-- **`SMS_PROVIDER`:** `fake` in `wrangler.jsonc`, and the only provider until one is chosen.
-- **`ALLOW_FAKE_SMS`:** the fake provider only runs when this is `true`. `pnpm dev` passes it with `--var` and the tests bind it, but a deploy doesn't have it, so a deployed Worker refuses to send or take texts until a real provider is in.
-- **`SIGNAL_NUMBER`:** the shared number parents text. Empty until there's a provider, so `/me` returns null and the page says it's on its way.
+- **`SMS_PROVIDER`:** `textbelt` in `wrangler.jsonc`, so a deploy sends real texts. `pnpm dev` and the tests override it to `fake`.
+- **`TEXTBELT_KEY`:** secret, required when the provider is `textbelt`. It's a GitHub secret that CI passes to the Worker.
+- **`ALLOW_FAKE_SMS`:** the fake provider only runs when this is `true`. `pnpm dev` passes it with `--var` and the tests bind it, but a deploy doesn't have it, so a deployed Worker can never fall back to the fake.
+- **`SIGNAL_NUMBER`:** the shared number parents text. Empty while the provider is Textbelt, which has no number to text, so `/me` returns null and the page says it's on its way.
+
+## Textbelt
+
+The deployed provider. [Textbelt](https://textbelt.com) sends one text per HTTP call from a shared pool of numbers, paid for in packs of texts.
+
+- **Outbound only.** It can't receive texts outside the US, so `/sms/inbound` always answers 403. Signals are sent, updated and solved from the web page, and a reply or a STOP from a helper never reaches the app.
+- **No links** in a text until the key is whitelisted on Textbelt's site.
+- **About one text a second** is what Textbelt asks for, and `sendAll` sends a group's texts together, so a big group may see some fail.
+- **Every sign-in code is a paid text.**
 
 ## The fake SMS provider
+
+Used by `pnpm dev` and the tests.
 
 No texts leave the machine. The fake provider prints every outbound text in the API's `wrangler dev` output as `[fake sms] to +447700900400: ...`, which is where sign-in codes show up. Its inbound webhook takes plain JSON, so you can play any phone with curl. Every JSON route needs `content-type: application/json`, which keeps plain HTML forms on other build40for40.com pages from posting to it:
 

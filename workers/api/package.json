@@ -5,7 +5,7 @@
   "description": "The day17 api Worker.",
   "type": "module",
   "scripts": {
-    "dev": "pnpm migrate && pnpm wrangler dev --port 8787 --var ALLOW_FAKE_SMS:true",
+    "dev": "pnpm migrate && pnpm wrangler dev --port 8787 --var SMS_PROVIDER:fake --var ALLOW_FAKE_SMS:true",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "types": "wrangler types --env-interface Env --strict-vars false",
