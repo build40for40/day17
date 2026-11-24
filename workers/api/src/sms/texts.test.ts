@@ -52,11 +52,11 @@ const systemTexts = {
 };
 
 describe("system texts", () => {
-  it.each(Object.entries(systemTexts))("%s has English then French", (_name, text) => {
-    const [english, french, ...rest] = text.split("\n\n");
-    expect(english).toBeTruthy();
-    expect(french).toBeTruthy();
-    expect(rest).toEqual([]);
+  it.each(Object.entries(systemTexts))("%s is one English paragraph in plain SMS characters", (_name, text) => {
+    expect(text).toBeTruthy();
+    expect(text).not.toContain("\n");
+    // Anything outside this set makes a text cost twice as many credits.
+    expect(text).toMatch(/^[A-Za-z0-9 .,:;!?'"()\/&%+@#*=<>_-]+$/);
   });
 
   it.each(Object.entries(systemTexts))("%s has no emoji and no mid sentence dashes", (_name, text) => {
