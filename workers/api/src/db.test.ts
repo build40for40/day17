@@ -24,8 +24,8 @@ describe("helpers", () => {
 
   it("maps a signal row", () => {
     expect(
-      toSignal({ id: "s1", household_id: "h1", text: "Pickup at 5", source: "sms", status: "open", opened_at: "2026-11-24T09:00:00.000Z", solved_at: null }),
-    ).toEqual({ id: "s1", householdId: "h1", text: "Pickup at 5", source: "sms", status: "open", openedAt: "2026-11-24T09:00:00.000Z", solvedAt: null });
+      toSignal({ id: "s1", household_id: "h1", text: "Pickup at 5", source: "sms", status: "open", opened_at: "2026-11-24T09:00:00.000Z", solved_at: null, signed_off_person_id: null }),
+    ).toEqual({ id: "s1", householdId: "h1", text: "Pickup at 5", source: "sms", status: "open", openedAt: "2026-11-24T09:00:00.000Z", solvedAt: null, signedOffPersonId: null });
   });
 });
 
@@ -48,9 +48,11 @@ describe("schema", () => {
     await db.prepare("INSERT INTO signals (id, household_id, text, source) VALUES ('s2', 'h1', 'Nappies', 'sms')").run();
   });
 
-  it("lets a person own only one household", async () => {
+  it("lets a person own more than one household", async () => {
     await seedHousehold();
-    await expect(db.prepare("INSERT INTO memberships (household_id, person_id, role) VALUES ('h2', 'p1', 'owner')").run()).rejects.toThrow(/UNIQUE/);
+    await db.prepare("INSERT INTO memberships (household_id, person_id, role) VALUES ('h2', 'p1', 'owner')").run();
+    const owned = await db.prepare("SELECT COUNT(*) AS n FROM memberships WHERE person_id = 'p1' AND role = 'owner'").first<{ n: number }>();
+    expect(owned?.n).toBe(2);
   });
 
   it("dedupes provider ids but allows many without one", async () => {

@@ -11,13 +11,14 @@ export type ErrorCode =
   | "too_many_attempts"
   | "unauthorized"
   | "forbidden"
-  | "already_has_household"
+  | "too_many_households"
   | "no_household"
   | "too_many_helpers"
   | "duplicate_helper"
   | "signal_too_long"
   | "too_many_signals"
   | "no_open_signal"
+  | "not_accepted"
   | "not_found"
   | "method_not_allowed"
   | "not_implemented"
@@ -28,6 +29,7 @@ export type OkResponse = { ok: true };
 
 export type SignalStatus = "open" | "solved";
 export type SignalSource = "sms" | "web";
+export type RecipientState = "not_read" | "pending" | "accepted" | "rejected";
 export type MembershipRole = "owner" | "helper";
 
 export type Person = {
@@ -58,6 +60,14 @@ export type Signal = {
   status: SignalStatus;
   openedAt: string;
   solvedAt: string | null;
+  signedOffPersonId: string | null;
+};
+
+export type SignalRecipient = {
+  personId: string;
+  name: string;
+  state: RecipientState;
+  signedOff: boolean;
 };
 
 export type VerifyStartRequest = { phone: string; turnstileToken?: string };
@@ -66,10 +76,15 @@ export type VerifyStartResponse = OkResponse;
 export type VerifyCheckRequest = { phone: string; code: string };
 export type VerifyCheckResponse = OkResponse;
 
+export type Group = {
+  household: Household;
+  openSignal: Signal | null;
+  recipients: SignalRecipient[];
+};
+
 export type MeResponse = {
   person: Person;
-  household: Household | null;
-  openSignal: Signal | null;
+  groups: Group[];
   signalNumber: string | null;
 };
 
@@ -82,7 +97,11 @@ export type CreateHouseholdRequest = {
 };
 export type CreateHouseholdResponse = { household: Household };
 
-export type CreateSignalRequest = { text: string };
+export type CreateSignalRequest = { text: string; householdId?: string };
 export type CreateSignalResponse = { signal: Signal };
 
+export type SolveSignalRequest = { householdId?: string };
 export type SolveSignalResponse = { signal: Signal };
+
+export type SignOffRequest = { personId: string; householdId?: string };
+export type SignOffResponse = { signal: Signal };

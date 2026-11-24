@@ -55,7 +55,7 @@ describe('GroupStep', () => {
   })
 
   it('posts normalised helpers and emits created', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(Response.json({ household: {} }, { status: 201 }))
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ household: { id: 'h1' } }, { status: 201 }))
     vi.stubGlobal('fetch', fetchMock)
     const wrapper = mount(GroupStep)
 
@@ -68,7 +68,7 @@ describe('GroupStep', () => {
       householdName: 'The Martins',
       helpers: [{ name: 'Nan', phone: '+447700900111' }],
     })
-    expect(wrapper.emitted('created')).toHaveLength(1)
+    expect(wrapper.emitted('created')).toEqual([['h1']])
   })
 
   it('emits expired when the session has gone', async () => {
@@ -80,5 +80,15 @@ describe('GroupStep', () => {
     await flushPromises()
 
     expect(wrapper.emitted('expired')).toHaveLength(1)
+  })
+
+  it('hides the name field and offers cancel when adding another group', async () => {
+    const wrapper = mount(GroupStep, { props: { knownName: 'Sam' } })
+
+    expect(wrapper.find('[data-test="parent-name"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('A new group')
+    await wrapper.get('[data-test="cancel"]').trigger('click')
+
+    expect(wrapper.emitted('cancel')).toHaveLength(1)
   })
 })

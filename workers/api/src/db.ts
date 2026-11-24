@@ -1,4 +1,4 @@
-import type { MembershipRole, Signal, SignalSource, SignalStatus } from "contract";
+import type { MembershipRole, RecipientState, Signal, SignalSource, SignalStatus } from "contract";
 
 export type MessageDirection = "in" | "out";
 export type MessageKind =
@@ -10,7 +10,17 @@ export type MessageKind =
   | "relay"
   | "nothing_open"
   | "signup_link"
-  | "refused";
+  | "refused"
+  | "reply_received"
+  | "reply"
+  | "signed_off"
+  | "standby"
+  | "stand_down"
+  | "dropped_out"
+  | "still_needed"
+  | "code_prompt"
+  | "sign_off_help"
+  | "pick_group";
 export type MessageStatus = "received" | "sent" | "failed";
 
 export type HouseholdRow = { id: string; name: string; created_at: string };
@@ -38,6 +48,16 @@ export type SignalRow = {
   status: SignalStatus;
   opened_at: string;
   solved_at: string | null;
+  signed_off_person_id: string | null;
+};
+
+export type RecipientRow = {
+  signal_id: string;
+  person_id: string;
+  code: number;
+  slot: number;
+  state: RecipientState;
+  updated_at: string;
 };
 
 export type MessageRow = {
@@ -88,5 +108,6 @@ export function toSignal(row: SignalRow): Signal {
     status: row.status,
     openedAt: row.opened_at,
     solvedAt: row.solved_at,
+    signedOffPersonId: row.signed_off_person_id,
   };
 }

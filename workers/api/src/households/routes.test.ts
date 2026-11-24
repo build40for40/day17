@@ -1,5 +1,6 @@
 import { createExecutionContext } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
+import { MAX_HOUSEHOLDS } from "contract";
 import { MAX_HOUSEHOLDS_PER_DAY } from "../limits";
 import worker from "../index";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -50,13 +51,12 @@ describe("GET /me", () => {
     expect((await call("GET", "/me", "ghost")).status).toBe(401);
   });
 
-  it("returns a null household before one exists", async () => {
+  it("returns no groups before one exists", async () => {
     const response = await call("GET", "/me", "parent");
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       person: { id: "parent", phone: PARENT, name: null },
-      household: null,
-      openSignal: null,
+      groups: [],
       signalNumber: null,
     });
   });
@@ -65,14 +65,15 @@ describe("GET /me", () => {
     await call("POST", "/households", "parent", valid());
     const me = (await (await call("GET", "/me", "parent")).json()) as any;
     await env.DB.prepare("INSERT INTO signals (id, household_id, text, source) VALUES ('s1', ?, 'Pickup at 5', 'web')")
-      .bind(me.household.id)
+      .bind(me.groups[0].household.id)
       .run();
 
     const after = (await (await call("GET", "/me", "parent")).json()) as any;
     expect(after.person.name).toBe("Sam");
-    expect(after.household.name).toBe("The Martins");
-    expect(after.household.helpers).toEqual([expect.objectContaining({ name: "Gran", phone: GRAN, optedOut: false })]);
-    expect(after.openSignal).toMatchObject({ id: "s1", text: "Pickup at 5", status: "open" });
+    expect(after.groups).toHaveLength(1);
+    expect(after.groups[0].household.name).toBe("The Martins");
+    expect(after.groups[0].household.helpers).toEqual([expect.objectContaining({ name: "Gran", phone: GRAN, optedOut: false })]);
+    expect(after.groups[0].openSignal).toMatchObject({ id: "s1", text: "Pickup at 5", status: "open" });
   });
 });
 
@@ -104,12 +105,27 @@ describe("POST /households", () => {
     ]);
   });
 
-  it("rejects a parent who already owns a household", async () => {
+  it("lets a parent own several groups, each with its own helpers and signal", async () => {
     await call("POST", "/households", "parent", valid());
+    const response = await call("POST", "/households", "parent", { ...valid([{ name: "Coach", phone: OTHER_PARENT }]), householdName: "Football" });
+    expect(response.status).toBe(201);
+    expect(((await response.json()) as any).household).toMatchObject({ name: "Football", helpers: [expect.objectContaining({ name: "Coach" })] });
+
+    const me = (await (await call("GET", "/me", "parent")).json()) as any;
+    expect(me.groups.map((group: any) => group.household.name)).toEqual(["The Martins", "Football"]);
+    expect(me.groups.map((group: any) => group.household.helpers.length)).toEqual([valid().helpers.length, 1]);
+  });
+
+  it("stops at the maximum number of groups", async () => {
+    const insert = env.DB.prepare("INSERT INTO households (id, name) VALUES (?, 'Group')");
+    const own = env.DB.prepare("INSERT INTO memberships (household_id, person_id, role) VALUES (?, 'parent', 'owner')");
+    await env.DB.batch(Array.from({ length: MAX_HOUSEHOLDS }, (_, i) => [insert.bind(`g${i}`), own.bind(`g${i}`)]).flat());
+
     const response = await call("POST", "/households", "parent", valid());
+
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({ error: "already_has_household" });
-    expect(await count("households")).toBe(1);
+    expect(await response.json()).toEqual({ error: "too_many_households" });
+    expect(await count("households")).toBe(MAX_HOUSEHOLDS);
   });
 
   it.each([
@@ -168,7 +184,7 @@ describe("POST /households", () => {
     expect(household.helpers).toEqual([expect.objectContaining({ id: "gran", name: "Nan" })]);
 
     const olivia = (await (await call("GET", "/me", "other")).json()) as any;
-    expect(olivia.household.helpers).toEqual([expect.objectContaining({ id: "gran", name: "Gran" })]);
+    expect(olivia.groups[0].household.helpers).toEqual([expect.objectContaining({ id: "gran", name: "Gran" })]);
     expect(await env.DB.prepare("SELECT name FROM people WHERE id = 'gran'").first("name")).toBe("Granny Rose");
     expect(await count("people")).toBe(3);
   });
@@ -238,7 +254,7 @@ describe("DELETE /households/mine", () => {
 
   it("deletes the household, its data and the parent, and signs them out", async () => {
     await call("POST", "/households", "parent", valid());
-    const { household } = (await (await call("GET", "/me", "parent")).json()) as any;
+    const { household } = ((await (await call("GET", "/me", "parent")).json()) as any).groups[0];
     await env.DB.prepare("INSERT INTO signals (id, household_id, text, source, status) VALUES ('s1', ?, 'x', 'web', 'solved')")
       .bind(household.id)
       .run();
@@ -254,6 +270,31 @@ describe("DELETE /households/mine", () => {
     expect(await count("people")).toBe(0);
 
     expect((await call("GET", "/me", "parent")).status).toBe(401);
+  });
+
+  it("deletes one group of several by id and keeps the parent signed in", async () => {
+    await call("POST", "/households", "parent", valid());
+    await call("POST", "/households", "parent", { ...valid(), householdName: "Football" });
+    const { groups } = (await (await call("GET", "/me", "parent")).json()) as any;
+
+    expect((await call("DELETE", "/households/mine", "parent")).status).toBe(400);
+    const response = await call("DELETE", `/households/mine?id=${groups[1].household.id}`, "parent");
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("Set-Cookie")).toBeNull();
+    const after = (await (await call("GET", "/me", "parent")).json()) as any;
+    expect(after.person.name).toBe("Sam");
+    expect(after.groups.map((group: any) => group.household.name)).toEqual(["The Martins"]);
+  });
+
+  it("won't delete a group that belongs to someone else", async () => {
+    await addPerson("other", OTHER_PARENT, "Olivia");
+    await call("POST", "/households", "other", valid());
+    await call("POST", "/households", "parent", valid());
+    const theirs = ((await (await call("GET", "/me", "other")).json()) as any).groups[0].household.id;
+
+    expect((await call("DELETE", `/households/mine?id=${theirs}`, "parent")).status).toBe(404);
+    expect(await count("households")).toBe(2);
   });
 
   it("keeps helpers who help in another household", async () => {

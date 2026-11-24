@@ -36,7 +36,11 @@ One workflow, `.github/workflows/ci.yml`, built from the shared `build40for40/ac
 ## Data
 
 - **D1:** the API's own database, named `day17` and bound as `DB`. It's separate from the site's `40for40` database. The schema lives in `workers/api/migrations/`, one numbered SQL file per change. Tests apply the migrations to a fresh database for every test file.
-- **Tables:** `households`, `people` (one row per phone number), `memberships` (owner or helper, with the name that parent gave the helper), `signals` (at most one open per household), `messages` (every text in and out, deduped by `provider_id`), `verifications` (hashed sign-in codes) and `rate_events` (one row per rate limited action, keyed by phone or IP).
+- **Tables:** `households`, `people` (one row per phone number), `memberships` (owner or helper, with the name that parent gave the helper), `signals` (at most one open per group, with the helper the parent signed off on), `signal_recipients` (one row per helper per signal: their reply code and their state), `messages` (every text in and out, deduped by `provider_id`), `verifications` (hashed sign-in codes) and `rate_events` (one row per rate limited action, keyed by phone or IP).
+- **Several groups:** a parent can own up to 5 groups (one per child, the football team), each with its own helpers and its own open signal. The page has a group switcher, and every signal endpoint takes a `householdId`. By text, a parent with several groups is told to pick on the page, unless exactly one of their groups has a signal open, which then gets the update.
+- **Reply codes:** every helper gets a code for each signal, unique among their open ones, and answers with `Y4` (can help), `C4` (checking) or `N4` (can't). A text with a code always goes to that signal, so a parent who also helps another household can't open their own signal by mistake. Free text from a parent with an unanswered alert gets a "which signal?" prompt first, and sending it again opens their own.
+- **Only where replies can arrive:** a provider says whether it can receive texts (`receives`). The fake can, Textbelt can't. With Textbelt the broadcast goes out without the reply code line and the page hides the helper states, so nobody is asked to reply to a number that can't hear them.
+- **States:** a helper is `not_read`, `pending`, `accepted` or `rejected`. A signal is in alert until the parent signs off on one accepted helper (`OK 2` by text, or Confirm on the page), which doesn't close it. Other accepted helpers stay warm as backup, and if the signed off helper sends `N`, the signal goes back to alert and everyone who hasn't answered is asked again. Only SOLVED or the 24 hour cron closes a signal.
 - **Names:** a helper's name lives on their membership, so each parent only ever sees the name they typed. `people.name` is the name a parent gave themselves.
 - **Deletion:** deleting a household removes its memberships, signals and messages, the people it leaves with no other household (the parent included), and signs the parent out. Someone who texted STOP keeps a nameless row with `opted_out_at` so they're never texted again, not even a sign-in code.
 - **Limits:** on top of the contract's limits, `workers/api/src/limits.ts` caps sign-in codes per IP and across everyone per hour, broadcasts (signals and updates) per parent per day, and new households per parent per day. Those counts are kept by phone, so deleting a household doesn't reset them. "Nothing open" and refusal replies go out at most once an hour per number, and texts from `SIGNAL_NUMBER` itself are ignored. Only UK (+44) and French (+33) numbers are accepted.
@@ -73,7 +77,8 @@ curl -c jar -X POST $B/verify/check -H 'content-type: application/json' -d '{"ph
 curl -b jar -X POST $B/households -H 'content-type: application/json' \
   -d '{"parentName":"Anastasia","householdName":"The Martins","helpers":[{"name":"Grandma","phone":"07700 900401"}]}'
 curl -X POST $B/sms/inbound -H 'content-type: application/json' -d '{"from":"+447700900400","body":"Can anyone grab Leo at 5?"}'
-curl -X POST $B/sms/inbound -H 'content-type: application/json' -d '{"from":"+447700900401","body":"On my way"}'
+curl -X POST $B/sms/inbound -H 'content-type: application/json' -d '{"from":"+447700900401","body":"Y1 on my way"}'
+curl -X POST $B/sms/inbound -H 'content-type: application/json' -d '{"from":"+447700900400","body":"OK 1"}'
 curl -X POST $B/sms/inbound -H 'content-type: application/json' -d '{"from":"+447700900400","body":"SOLVED"}'
 ```
 

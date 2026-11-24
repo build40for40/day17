@@ -1,6 +1,7 @@
 export const API_BASE = "/day17/api/v1";
 
 export const MAX_HELPERS = 10;
+export const MAX_HOUSEHOLDS = 5;
 export const MAX_SIGNALS_PER_DAY = 5;
 export const MAX_SIGNAL_LENGTH = 300;
 export const MAX_NAME_LENGTH = 60;

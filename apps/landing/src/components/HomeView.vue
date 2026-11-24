@@ -1,21 +1,41 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { MeResponse, Signal } from 'contract'
+import { computed, ref, watch } from 'vue'
+import { MAX_HOUSEHOLDS, type MeResponse } from 'contract'
 
 import { deleteHousehold } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
 import SignalPanel from './SignalPanel.vue'
 
-const props = defineProps<{ me: MeResponse }>()
-const emit = defineEmits<{ signal: [signal: Signal | null]; deleted: []; expired: [] }>()
+const props = defineProps<{ me: MeResponse; startAt?: string }>()
+const emit = defineEmits<{ changed: []; deleted: []; expired: []; add: [] }>()
 
+const selectedId = ref(props.startAt ?? props.me.groups[0]?.household.id ?? '')
 const confirming = ref(false)
 const error = ref('')
 
+const group = computed(() => props.me.groups.find((g) => g.household.id === selectedId.value) ?? props.me.groups[0])
+
+watch(
+  () => props.me.groups.map((g) => g.household.id),
+  (ids, previous) => {
+    const added = ids.find((id) => !previous.includes(id))
+    if (added) selectedId.value = added
+    else if (!ids.includes(selectedId.value)) selectedId.value = ids[0] ?? ''
+  },
+)
+
+function select(id: string) {
+  selectedId.value = id
+  confirming.value = false
+  error.value = ''
+}
+
 async function remove() {
+  if (!group.value) return
   error.value = ''
   try {
-    await deleteHousehold()
+    await deleteHousehold(group.value.household.id)
+    confirming.value = false
     emit('deleted')
   } catch (e) {
     error.value = messageFor(e)
@@ -25,8 +45,34 @@ async function remove() {
 </script>
 
 <template>
-  <div v-if="props.me.household">
-    <h2 class="group">{{ props.me.household.name }}</h2>
+  <div v-if="group">
+    <nav class="groups" aria-label="Your groups">
+      <template v-if="props.me.groups.length > 1">
+        <button
+          v-for="g in props.me.groups"
+          :key="g.household.id"
+          class="chip"
+          :class="{ active: g.household.id === group.household.id, live: g.openSignal }"
+          type="button"
+          :aria-pressed="g.household.id === group.household.id"
+          data-test="group-tab"
+          @click="select(g.household.id)"
+        >
+          {{ g.household.name }}
+        </button>
+      </template>
+      <button
+        v-if="props.me.groups.length < MAX_HOUSEHOLDS"
+        class="chip add"
+        type="button"
+        data-test="add-group"
+        @click="emit('add')"
+      >
+        + New group
+      </button>
+    </nav>
+
+    <h2 class="group" data-test="group-name">{{ group.household.name }}</h2>
 
     <section v-if="props.me.signalNumber" class="card">
       <h3>Your number to text</h3>
@@ -34,15 +80,18 @@ async function remove() {
     </section>
 
     <SignalPanel
-      :open-signal="props.me.openSignal"
-      @changed="emit('signal', $event)"
+      :key="group.household.id"
+      :household-id="group.household.id"
+      :open-signal="group.openSignal"
+      :recipients="group.recipients"
+      @changed="emit('changed')"
       @expired="emit('expired')"
     />
 
     <section class="card">
       <h3>Your helpers</h3>
       <ul class="helpers">
-        <li v-for="helper in props.me.household.helpers" :key="helper.id">
+        <li v-for="helper in group.household.helpers" :key="helper.id">
           <span>{{ helper.name }}</span>
           <span class="muted">{{ helper.phone }}<template v-if="helper.optedOut"> (said STOP)</template></span>
         </li>
@@ -51,10 +100,10 @@ async function remove() {
 
     <section class="danger">
       <button v-if="!confirming" class="link quiet" type="button" data-test="delete" @click="confirming = true">
-        Delete my group and all its data
+        Delete {{ props.me.groups.length > 1 ? `"${group.household.name}"` : 'my group' }} and all its data
       </button>
       <div v-else>
-        <p>This wipes your group, your helpers and every message. It can't be undone.</p>
+        <p>This wipes {{ group.household.name }}, its helpers and every message. It can't be undone.</p>
         <p v-if="error" class="error" role="alert" data-test="error">{{ error }}</p>
         <div class="row">
           <button class="danger-btn" type="button" data-test="confirm-delete" @click="remove">Yes, delete it all</button>

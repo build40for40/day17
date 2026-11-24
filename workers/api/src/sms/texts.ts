@@ -40,3 +40,81 @@ export function tooManyTexts(): string {
 export function relay(senderName: string, body: string): string {
   return `${senderName}: ${body}`;
 }
+
+export type Offer = { name: string; slot: number };
+export type Alert = { name: string; code: number };
+
+const replyHint = (code: number) => `Reply Y${code} if you can, C${code} if you're checking, N${code} if you can't.`;
+
+const withNote = (text: string, name: string, note: string) => (note ? `${text} ${relay(name, note)}` : text);
+
+const offerList = (offers: Offer[]) => offers.map((offer) => `${offer.name} (OK ${offer.slot})`).join(", ");
+
+export function signalWithCodes(senderName: string, body: string, code: number): string {
+  return `${relay(senderName, body)}\n${replyHint(code)}`;
+}
+
+export function updateWithCodes(senderName: string, body: string, code: number): string {
+  return `${relay(senderName, body)} (Y${code} / C${code} / N${code})`;
+}
+
+export function stillNeeded(senderName: string, body: string, code: number): string {
+  return `Still needed. ${relay(senderName, body)}\n${replyHint(code)}`;
+}
+
+export function acceptReceived(parentName: string): string {
+  return `Got it. ${parentName} knows you can help. Hang tight until they confirm.`;
+}
+
+export function checkingReceived(parentName: string, code: number): string {
+  return `Got it. ${parentName} knows you're checking. Send Y${code} or N${code} when you know.`;
+}
+
+export function rejectReceived(parentName: string): string {
+  return `No worries. ${parentName} knows you can't this time.`;
+}
+
+export function helperAccepted(helperName: string, slot: number, note = ""): string {
+  return withNote(`${helperName} can help. Reply OK ${slot} to confirm them.`, helperName, note);
+}
+
+export function helperChecking(helperName: string, note = ""): string {
+  return withNote(`${helperName} is checking.`, helperName, note);
+}
+
+export function helperRejected(helperName: string, note = ""): string {
+  return withNote(`${helperName} can't this time.`, helperName, note);
+}
+
+export function youAreOn(parentName: string, code: number): string {
+  return `You're on, hero. ${parentName} is counting on you. Reply N${code} if you have to drop out.`;
+}
+
+export function standby(parentName: string, chosenName: string): string {
+  return `${chosenName} has this one for ${parentName}. Stay warm, you're the backup.`;
+}
+
+export function standDown(parentName: string, chosenName: string): string {
+  return `${chosenName} is on it for ${parentName}. Stand easy.`;
+}
+
+export function droppedOut(helperName: string, offers: Offer[]): string {
+  return offers.length > 0
+    ? `${helperName} had to drop out. Still offering: ${offerList(offers)}.`
+    : `${helperName} had to drop out. We've asked everyone else again.`;
+}
+
+export function signOffHelp(offers: Offer[]): string {
+  return offers.length > 0
+    ? `Nobody by that number has offered. Offers so far: ${offerList(offers)}.`
+    : "Nobody has offered yet, so there's no one to confirm.";
+}
+
+export function codePrompt(alerts: Alert[], ownsHousehold: boolean): string {
+  const codes = alerts.map((alert) => `Y${alert.code}, C${alert.code} or N${alert.code} for ${alert.name}`).join(", ");
+  return `Which signal is that for? Reply ${codes}.${ownsHousehold ? " To raise your own signal, send it again." : ""}`;
+}
+
+export function pickGroup(): string {
+  return `You have more than one group, so pick which one on the page: ${SIGNUP_URL}`;
+}

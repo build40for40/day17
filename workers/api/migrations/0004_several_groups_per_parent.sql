@@ -1,0 +1,1 @@
+DROP INDEX memberships_one_owned_household;

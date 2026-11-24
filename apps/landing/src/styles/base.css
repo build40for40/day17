@@ -290,3 +290,76 @@ footer {
 footer a {
   color: var(--signal);
 }
+
+.replies {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.replies li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+
+.replies .state {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.replies .pending .state {
+  color: var(--signal);
+}
+
+.replies .accepted .state,
+.replies .on-it .state {
+  color: var(--ok);
+}
+
+.replies .on-it {
+  font-weight: 700;
+}
+
+.replies .link {
+  flex-basis: 100%;
+  text-align: left;
+}
+
+.groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.chip {
+  padding: 0.5rem 0.875rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chip.active {
+  color: var(--night);
+  background: var(--signal);
+  border-color: var(--signal);
+}
+
+.chip.live:not(.active) {
+  border-color: var(--alarm);
+}
+
+.chip.add {
+  color: var(--muted);
+  background: transparent;
+  border-style: dashed;
+}

@@ -5,6 +5,7 @@ import {
   type CreateSignalResponse,
   type ErrorCode,
   type MeResponse,
+  type SignOffResponse,
   type SolveSignalResponse,
 } from 'contract'
 
@@ -47,8 +48,14 @@ export const getMe = () => request<MeResponse>('GET', '/me')
 export const createHousehold = (input: CreateHouseholdRequest) =>
   request<CreateHouseholdResponse>('POST', '/households', input)
 
-export const deleteHousehold = () => request<void>('DELETE', '/households/mine')
+export const deleteHousehold = (householdId: string) =>
+  request<void>('DELETE', `/households/mine?id=${encodeURIComponent(householdId)}`)
 
-export const sendSignal = (text: string) => request<CreateSignalResponse>('POST', '/signals', { text })
+export const sendSignal = (householdId: string, text: string) =>
+  request<CreateSignalResponse>('POST', '/signals', { householdId, text })
 
-export const solveSignal = () => request<SolveSignalResponse>('POST', '/signals/solve')
+export const solveSignal = (householdId: string) =>
+  request<SolveSignalResponse>('POST', '/signals/solve', { householdId })
+
+export const signOff = (householdId: string, personId: string) =>
+  request<SignOffResponse>('POST', '/signals/sign-off', { householdId, personId })
