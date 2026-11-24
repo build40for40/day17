@@ -10,6 +10,7 @@ import {
   type RemoveHelperResponse,
   type SignOffResponse,
   type SolveSignalResponse,
+  type UpdateMeResponse,
 } from 'contract'
 
 export class ApiError extends Error {
@@ -47,6 +48,12 @@ export const checkVerification = (phone: string, code: string) =>
   request<{ ok: true }>('POST', '/verify/check', { phone, code })
 
 export const getMe = () => request<MeResponse>('GET', '/me')
+
+export const updateMe = (name: string) => request<UpdateMeResponse>('PATCH', '/me', { name })
+
+export const deleteMe = () => request<void>('DELETE', '/me')
+
+export const signOut = () => request<void>('POST', '/sign-out', {})
 
 export const createHousehold = (input: CreateHouseholdRequest) =>
   request<CreateHouseholdResponse>('POST', '/households', input)
