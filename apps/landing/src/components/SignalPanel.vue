@@ -4,6 +4,8 @@ import { MAX_SIGNAL_LENGTH, type RecipientState, type Signal, type SignalRecipie
 
 import { sendSignal, signOff, solveSignal } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
+import lanternAlert from '../assets/lantern-alert.jpg'
+import lanternRunning from '../assets/lantern-running.jpg'
 
 const props = defineProps<{
   householdId: string
@@ -36,6 +38,9 @@ const STATE_LABELS: Record<RecipientState, string> = {
 }
 const labelFor = (recipient: SignalRecipient) => (recipient.signedOff ? 'On it' : STATE_LABELS[recipient.state])
 const onIt = computed(() => props.recipients.find((recipient) => recipient.signedOff))
+
+// Asleep with nothing open, alarmed while the signal is up, running once someone's on it.
+const lantern = computed(() => (onIt.value ? lanternRunning : lanternAlert))
 
 async function run(action: () => Promise<Signal | null>) {
   busy.value = true
@@ -72,10 +77,15 @@ const solve = () =>
 
 <template>
   <section class="card signal live">
-    <p class="eyebrow" data-test="stage">
-      <template v-if="groupName">{{ groupName }}: </template>{{ onIt ? `${onIt.name} is on it` : 'Signal is up' }}
-    </p>
-    <p class="ask" data-test="open-text">{{ openSignal.text }}</p>
+    <div class="card-head">
+      <img class="lantern" :src="lantern" alt="" data-test="lantern" />
+      <div>
+        <p class="eyebrow" data-test="stage">
+          <template v-if="groupName">{{ groupName }}: </template>{{ onIt ? `${onIt.name} is on it` : 'Signal is up' }}
+        </p>
+        <p class="ask" data-test="open-text">{{ openSignal.text }}</p>
+      </div>
+    </div>
     <ul v-if="recipients.length" class="replies">
       <li v-for="recipient in recipients" :key="recipient.personId" :class="recipient.signedOff ? 'on-it' : recipient.state" data-test="recipient">
         <span>{{ recipient.name }}</span>

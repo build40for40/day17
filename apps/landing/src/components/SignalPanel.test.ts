@@ -78,4 +78,14 @@ describe('SignalPanel', () => {
     expect(wrapper.findAll('[data-test="confirm"]').map((button) => button.text())).toEqual(['Switch to them'])
   })
 
+  it('shows the lantern alarmed, then running once someone is on it', async () => {
+    const recipient: SignalRecipient = { personId: 'p2', name: 'Nan', state: 'accepted', signedOff: false }
+    const wrapper = mount(SignalPanel, { props: { householdId: 'h1', openSignal: signal, recipients: [recipient] } })
+    const lantern = () => wrapper.get('[data-test="lantern"]').attributes('src')
+
+    expect(lantern()).toContain('lantern-alert')
+
+    await wrapper.setProps({ recipients: [{ ...recipient, signedOff: true }] })
+    expect(lantern()).toContain('lantern-running')
+  })
 })

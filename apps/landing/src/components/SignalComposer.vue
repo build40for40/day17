@@ -3,6 +3,7 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { MATCH_THRESHOLD, MAX_SIGNAL_LENGTH, type Group } from 'contract'
 
 import { matchSignal, sendSignal } from '../api'
+import lanternSleep from '../assets/lantern-sleep.jpg'
 import { isUnauthorized, messageFor } from '../errors'
 
 const MATCH_DELAY_MS = 400
@@ -124,9 +125,13 @@ async function send() {
 
 <template>
   <section class="card signal">
-    <button v-if="!composing" class="red" type="button" data-test="red-button" @click="composing = true">
-      Send the signal
-    </button>
+    <template v-if="!composing">
+      <div v-if="!groups.some((group) => group.openSignal)" class="card-head">
+        <img class="lantern" :src="lanternSleep" alt="" data-test="lantern" />
+        <p class="muted">All quiet. Light the signal when you need your people.</p>
+      </div>
+      <button class="red" type="button" data-test="red-button" @click="composing = true">Send the signal</button>
+    </template>
 
     <form v-else novalidate @submit.prevent="send">
       <label>

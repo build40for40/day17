@@ -4,15 +4,36 @@
   box-sizing: border-box;
 }
 
+/*
+  Little Lantern: a dusk sky behind the whole page, white cards on top, and a paper lantern that changes mood.
+  Text sitting on the sky is light; everything inside a .card switches back to dark ink by redefining
+  --text, --muted and --link, so components don't need to know where they sit.
+  Red (--alarm) means the signal and nothing else. Green (--ok) means someone's on it.
+*/
 :root {
-  --night: #12141f;
-  --panel: #1d2030;
-  --edge: #333852;
-  --text: #f3efe4;
-  --muted: #a39f94;
-  --signal: #ffc61a;
-  --alarm: #e5282b;
-  --ok: #2fb67c;
+  --ink: #3d3350;
+  --soft: #6f6580;
+  --line: #eadfe6;
+  --card: #ffffff;
+  --field: #fffcf8;
+  --dusk: #6e68a8;
+  --dusk-deep: #4f4890;
+  --dusk-shadow: #37316a;
+  --glow: #ffb54d;
+  --glow-tint: #fff0d6;
+  --alarm: #e0503c;
+  --alarm-deep: #c13a28;
+  --alarm-ink: #a3301f;
+  --alarm-tint: #fde5df;
+  --ok: #2f7a50;
+  --ok-tint: #e2f2e8;
+  --display: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  --body: 'Nunito', system-ui, sans-serif;
+
+  /* On the sky */
+  --text: #ffffff;
+  --muted: #efe6f5;
+  --link: #ffe0a8;
 }
 
 html,
@@ -21,12 +42,27 @@ body {
 }
 
 body {
-  font-family: system-ui, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
+  min-height: 100vh;
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.55;
   overflow-x: hidden;
-  background: var(--night);
   color: var(--text);
+  background: var(--dusk-deep);
+}
+
+/* The sky is fixed to the screen, so it covers the whole page however long it gets. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 80% 15%, rgb(255 255 255 / 0.2) 0 2px, transparent 3px) 0 0 / 90px 90px,
+    radial-gradient(circle at 30% 60%, rgb(255 255 255 / 0.14) 0 1.5px, transparent 2.5px) 0 0 / 70px 70px,
+    radial-gradient(ellipse at 50% 115%, rgb(255 181 77 / 0.4), transparent 60%),
+    linear-gradient(180deg, #463f88 0%, #5c4f95 45%, #714d8a 75%, #7d4b7a 100%);
 }
 
 main {
@@ -37,50 +73,116 @@ main {
 
 .top {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
 
 .day {
-  margin: 0 0 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  display: inline-block;
+  margin: 0 0 1rem;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--signal);
+  color: #ffffff;
+  background: rgb(255 255 255 / 0.16);
+  border-radius: 999px;
 }
 
 h1 {
   margin: 0 0 1rem;
-  font-size: clamp(2rem, 9vw, 3rem);
+  font-family: var(--display);
+  font-size: clamp(2.1rem, 8.5vw, 3rem);
+  font-weight: 700;
   line-height: 1.05;
   text-wrap: balance;
+  text-shadow: 0 2px 18px rgb(40 30 90 / 0.35);
 }
 
 h2,
 h3 {
   margin: 0 0 0.5rem;
-  font-size: 1.125rem;
+  font-family: var(--display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .pitch {
   margin: 0 0 1.5rem;
   font-size: 1.0625rem;
+  color: var(--muted);
+}
+
+/* The lantern beside the welcome words, glowing gently. */
+.welcome-lantern {
+  position: relative;
+  width: 7.5rem;
+  margin: 0 auto 1.5rem;
+}
+
+.welcome-lantern::before {
+  content: '';
+  position: absolute;
+  inset: -22%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 190 90 / 0.55), rgb(255 190 90 / 0) 65%);
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.welcome-lantern img {
+  position: relative;
+}
+
+@keyframes breathe {
+  50% {
+    transform: scale(1.08);
+    opacity: 0.75;
+  }
+}
+
+.lantern {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 8px 20px rgb(60 40 110 / 0.3);
+}
+
+.card-head {
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+  gap: 0.85rem;
+  align-items: center;
+}
+
+.card-head .lantern {
+  width: 4rem;
 }
 
 .group {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
+  font-weight: 700;
 }
 
 .card {
+  --text: var(--ink);
+  --muted: var(--soft);
+  --link: var(--dusk-deep);
   display: grid;
-  gap: 0.75rem;
+  gap: 0.85rem;
   margin: 0 0 1rem;
-  padding: 1rem;
-  border: 1px solid var(--edge);
-  border-radius: 0.75rem;
-  background: var(--panel);
+  padding: 1.25rem;
+  color: var(--text);
+  background: var(--card);
+  border: 0;
+  border-radius: 1.5rem;
+  box-shadow: 0 14px 34px rgb(40 30 90 / 0.22);
 }
 
 .card p,
@@ -92,9 +194,9 @@ h3 {
 label,
 .field {
   display: grid;
-  gap: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 600;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 input,
@@ -102,17 +204,33 @@ select,
 textarea {
   width: 100%;
   min-width: 0;
-  padding: 0.75rem;
+  min-height: 3.1rem;
+  padding: 0.75rem 0.85rem;
   font: inherit;
-  color: var(--text);
-  background: var(--night);
-  border: 1px solid var(--edge);
-  border-radius: 0.5rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--field);
+  border: 2px solid var(--line);
+  border-radius: 0.9rem;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9d91a8;
+  font-weight: 400;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--dusk);
+  box-shadow: 0 0 0 4px #e6e2f6;
 }
 
 input:disabled {
-  color: var(--muted);
-  background: var(--panel);
+  color: var(--soft);
+  background: #f4f0f6;
   cursor: not-allowed;
 }
 
@@ -120,17 +238,15 @@ input:disabled {
   font-size: 0.875rem;
 }
 
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-button:focus-visible {
-  outline: 3px solid var(--signal);
-  outline-offset: 2px;
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--glow);
+  outline-offset: 3px;
 }
 
 fieldset {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.6rem;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -140,13 +256,19 @@ fieldset {
 legend {
   padding: 0;
   margin-bottom: 0.5rem;
-  font-size: 0.875rem;
+  font-family: var(--display);
+  font-size: 1.05rem;
   font-weight: 600;
+  color: var(--dusk-deep);
 }
 
 .helper {
   display: grid;
   gap: 0.5rem;
+  padding: 0.85rem;
+  background: #fdf7fb;
+  border: 2px solid var(--line);
+  border-radius: 1.1rem;
 }
 
 .phone-field {
@@ -178,7 +300,17 @@ legend {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
+  align-items: baseline;
   gap: 0.25rem 1rem;
+  padding: 0.6rem 0.85rem;
+  font-weight: 700;
+  background: #fdf7fb;
+  border-radius: 0.9rem;
+}
+
+.helpers li .muted {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .helpers .confirm {
@@ -212,75 +344,104 @@ button:disabled {
 }
 
 .primary {
-  min-height: 3rem;
-  padding: 0.75rem 1.25rem;
-  font-weight: 700;
-  color: #1a1400;
-  background: var(--signal);
+  min-height: 3.25rem;
+  padding: 0.8rem 1.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  background: var(--dusk-deep);
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 0 var(--dusk-shadow);
+}
+
+.primary:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--dusk-shadow);
 }
 
 .link {
   padding: 0.5rem 0;
-  color: var(--signal);
+  font-weight: 700;
+  color: var(--link);
   background: none;
   border: 0;
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .quiet {
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: 0.9rem;
 }
 
 .error {
-  color: #ff8a8a;
-  font-weight: 600;
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.85rem;
+  color: var(--alarm-ink);
+  font-weight: 700;
+  background: var(--alarm-tint);
+  border-radius: 0.85rem;
+}
+
+.card .error {
+  margin: 0;
 }
 
 .number {
-  font-size: 1.5rem;
+  font-family: var(--display);
+  font-size: 1.6rem;
   font-weight: 700;
-  color: var(--signal);
+  color: var(--ok);
+  font-variant-numeric: tabular-nums;
 }
 
 .eyebrow {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--alarm);
+  color: var(--alarm-ink);
 }
 
 .ask {
-  font-size: 1.25rem;
+  font-family: var(--display);
+  font-size: 1.35rem;
   font-weight: 600;
+  line-height: 1.3;
   overflow-wrap: anywhere;
 }
 
 .signal.live {
-  border-color: var(--alarm);
+  background: #fff9f6;
+  box-shadow: 0 0 0 3px var(--alarm), 0 14px 34px rgb(224 80 60 / 0.3);
 }
 
+/* The one red thing on the page. */
 .red {
   min-height: 7rem;
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #fff;
-  background: radial-gradient(circle at 50% 30%, #ff5a5c, var(--alarm));
+  font-family: var(--display);
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: radial-gradient(circle at 50% 25%, #f0705c, var(--alarm-deep));
   border: 0;
-  border-radius: 1rem;
-  box-shadow: 0 0 2rem rgb(229 40 43 / 0.45);
+  border-radius: 1.5rem;
+  box-shadow: 0 6px 0 #8e2516, 0 0 2.5rem rgb(255 150 60 / 0.45);
+}
+
+.red:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #8e2516, 0 0 2rem rgb(255 150 60 / 0.45);
 }
 
 .solved {
-  min-height: 3rem;
-  font-weight: 700;
-  color: #04170f;
+  min-height: 3.25rem;
+  font-weight: 800;
+  color: #ffffff;
   background: var(--ok);
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 0 #1f5535;
 }
 
 .counter {
@@ -290,31 +451,38 @@ button:disabled {
 }
 
 .counter.low {
-  color: var(--signal);
+  color: var(--alarm-ink);
+  font-weight: 700;
 }
 
 .danger {
   margin-top: 2rem;
 }
 
+.danger p {
+  color: var(--text);
+}
+
 .danger-btn {
   min-height: 3rem;
   padding: 0.75rem 1.25rem;
-  font-weight: 700;
-  color: #fff;
-  background: #9b1c1f;
+  font-weight: 800;
+  color: #ffffff;
+  background: #8e1f26;
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: 1rem;
 }
 
 footer {
   margin-top: 2rem;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   color: var(--muted);
+  text-align: center;
 }
 
 footer a {
-  color: var(--signal);
+  color: var(--link);
+  font-weight: 700;
 }
 
 .replies {
@@ -330,6 +498,9 @@ footer a {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.25rem 0.75rem;
+  padding: 0.55rem 0.8rem;
+  background: #fdf7fb;
+  border-radius: 0.8rem;
 }
 
 .replies .state {
@@ -338,16 +509,18 @@ footer a {
 }
 
 .replies .pending .state {
-  color: var(--signal);
+  color: #9a5a00;
 }
 
 .replies .accepted .state,
 .replies .on-it .state {
   color: var(--ok);
+  font-weight: 700;
 }
 
 .replies .on-it {
   font-weight: 700;
+  background: var(--ok-tint);
 }
 
 .replies .link {
@@ -355,6 +528,7 @@ footer a {
   text-align: left;
 }
 
+/* Group switcher, sitting on the sky. */
 .groups {
   display: flex;
   flex-wrap: wrap;
@@ -363,25 +537,26 @@ footer a {
 }
 
 .chip {
-  padding: 0.5rem 0.875rem;
+  padding: 0.5rem 0.95rem;
   font: inherit;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text);
-  background: var(--panel);
-  border: 1px solid var(--edge);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgb(255 255 255 / 0.14);
+  border: 2px solid rgb(255 255 255 / 0.35);
   border-radius: 999px;
   cursor: pointer;
 }
 
 .chip.active {
-  color: var(--night);
-  background: var(--signal);
-  border-color: var(--signal);
+  color: var(--ink);
+  background: #ffffff;
+  border-color: #ffffff;
 }
 
 .chip.live:not(.active) {
-  border-color: var(--alarm);
+  border-color: var(--glow);
+  box-shadow: 0 0 12px rgb(255 181 77 / 0.6);
 }
 
 .chip .score {
@@ -419,14 +594,15 @@ footer a {
 
 .reach {
   font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--signal);
+  font-weight: 700;
+  color: var(--dusk-deep);
 }
 
 .also-in {
   order: 1;
   flex-basis: 100%;
   font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--muted);
 }
 
@@ -446,9 +622,20 @@ footer a {
 .overview .link {
   justify-self: start;
   padding: 0;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .overview .link[aria-current] {
   text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-lantern::before {
+    animation: none;
+  }
+
+  .primary:active,
+  .red:active {
+    transform: none;
+  }
 }

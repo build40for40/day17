@@ -32,6 +32,12 @@ describe('SignalComposer', () => {
     vi.unstubAllGlobals()
   })
 
+  it('shows the lantern asleep while nothing is open', () => {
+    const wrapper = mount(SignalComposer, { props: { groups: [family] } })
+
+    expect(wrapper.get('[data-test="lantern"]').attributes('src')).toContain('lantern-sleep')
+  })
+
   it('opens the text field from the red button and counts characters', async () => {
     const wrapper = mount(SignalComposer, { props: { groups: [family] } })
 
