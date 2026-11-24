@@ -42,6 +42,7 @@ jobs:
       SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
       TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
       TEXTBELT_KEY: ${{ secrets.TEXTBELT_KEY }}
+      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
     steps:
       - uses: build40for40/actions/setup@v1
         id: setup
@@ -56,6 +57,7 @@ jobs:
             SESSION_SECRET
             TURNSTILE_SECRET
             TEXTBELT_KEY
+            TYPESAFE_API_KEY
           package-manager: ${{ steps.setup.outputs.package-manager }}
       - uses: build40for40/actions/deploy-worker@v1
         with:

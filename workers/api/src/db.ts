@@ -23,7 +23,7 @@ export type MessageKind =
   | "pick_group";
 export type MessageStatus = "received" | "sent" | "failed";
 
-export type HouseholdRow = { id: string; name: string; created_at: string };
+export type HouseholdRow = { id: string; name: string; description: string; created_at: string };
 
 export type PersonRow = {
   id: string;

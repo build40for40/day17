@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { MAX_SIGNAL_LENGTH, type Signal, type SignalRecipient } from 'contract'
+import type { Signal, SignalRecipient } from 'contract'
 
 import SignalPanel from './SignalPanel.vue'
 
@@ -18,41 +18,6 @@ const signal: Signal = {
 }
 
 describe('SignalPanel', () => {
-  it('opens the text field from the red button and counts characters', async () => {
-    const wrapper = mount(SignalPanel, { props: { householdId: 'h1', openSignal: null, recipients: [] } })
-
-    await wrapper.get('[data-test="red-button"]').trigger('click')
-    await wrapper.get('[data-test="text"]').setValue('hello')
-
-    expect(wrapper.get('[data-test="counter"]').text()).toContain(`${MAX_SIGNAL_LENGTH - 5} left`)
-  })
-
-  it('sends the signal and emits it', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(Response.json({ signal }, { status: 201 }))
-    vi.stubGlobal('fetch', fetchMock)
-    const wrapper = mount(SignalPanel, { props: { householdId: 'h1', openSignal: null, recipients: [] } })
-
-    await wrapper.get('[data-test="red-button"]').trigger('click')
-    await wrapper.get('[data-test="text"]').setValue('Grab Léa at 5')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
-
-    expect(fetchMock.mock.calls[0]![0]).toBe('/day17/api/v1/signals')
-    expect(wrapper.emitted('changed')).toEqual([[signal]])
-  })
-
-  it('shows an empty ask as an error without calling the API', async () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
-    const wrapper = mount(SignalPanel, { props: { householdId: 'h1', openSignal: null, recipients: [] } })
-
-    await wrapper.get('[data-test="red-button"]').trigger('click')
-    await wrapper.get('form').trigger('submit')
-
-    expect(wrapper.find('[data-test="error"]').exists()).toBe(true)
-    expect(fetchMock).not.toHaveBeenCalled()
-  })
-
   it('shows the open signal and closes it with Solved', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ signal: { ...signal, status: 'solved' } }))
     vi.stubGlobal('fetch', fetchMock)
@@ -66,12 +31,19 @@ describe('SignalPanel', () => {
     expect(wrapper.emitted('changed')).toEqual([[null]])
   })
 
-  it('lets the parent send an update while a signal is open', async () => {
+  it('sends an update to its own group while a signal is open', async () => {
     const wrapper = mount(SignalPanel, { props: { householdId: 'h1', openSignal: signal, recipients: [] } })
 
-    await wrapper.get('[data-test="update"]').trigger('click')
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ signals: [signal] }))
+    vi.stubGlobal('fetch', fetchMock)
 
-    expect(wrapper.text()).toContain("What's the update?")
+    await wrapper.get('[data-test="update"]').trigger('click')
+    await wrapper.get('[data-test="text"]').setValue('Make it 5:30')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ householdIds: ['h1'], text: 'Make it 5:30' })
+    expect(wrapper.emitted('changed')).toEqual([[signal]])
   })
 
   it('shows where each helper is and confirms one who offered', async () => {
@@ -106,26 +78,11 @@ describe('SignalPanel', () => {
     expect(wrapper.findAll('[data-test="confirm"]').map((button) => button.text())).toEqual(['Switch to them'])
   })
 
-  it('maps a rate limit error', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ error: 'too_many_signals' }, { status: 429 })))
-    const wrapper = mount(SignalPanel, { props: { householdId: 'h1', openSignal: null, recipients: [] } })
-
-    await wrapper.get('[data-test="red-button"]').trigger('click')
-    await wrapper.get('[data-test="text"]').setValue('help')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
-
-    expect(wrapper.get('[data-test="error"]').text()).toContain('24 hours')
-  })
-
-  it('shows the lantern asleep, alarmed, then running once someone is on it', async () => {
+  it('shows the lantern alarmed, then running once someone is on it', async () => {
     const recipient: SignalRecipient = { personId: 'p2', name: 'Nan', state: 'accepted', signedOff: false }
-    const wrapper = mount(SignalPanel, { props: { householdId: 'h1', openSignal: null, recipients: [] } })
+    const wrapper = mount(SignalPanel, { props: { householdId: 'h1', openSignal: signal, recipients: [recipient] } })
     const lantern = () => wrapper.get('[data-test="lantern"]').attributes('src')
 
-    expect(lantern()).toContain('lantern-sleep')
-
-    await wrapper.setProps({ openSignal: signal, recipients: [recipient] })
     expect(lantern()).toContain('lantern-alert')
 
     await wrapper.setProps({ recipients: [{ ...recipient, signedOff: true }] })

@@ -559,6 +559,32 @@ footer a {
   box-shadow: 0 0 12px rgb(255 181 77 / 0.6);
 }
 
+.chip .score {
+  margin-left: 0.25rem;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.picker .groups {
+  margin-bottom: 0;
+}
+
+.picker .chip {
+  color: var(--ink);
+  background: var(--field);
+  border-color: var(--line);
+}
+
+.picker .chip.active {
+  color: #ffffff;
+  background: var(--dusk-deep);
+  border-color: var(--dusk-deep);
+}
+
+.picker .hint {
+  font-weight: 400;
+}
+
 .chip.add {
   color: var(--muted);
   background: transparent;

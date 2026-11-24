@@ -34,7 +34,7 @@ import { anastasia, camille, grandma, insertSignal, outboundMessages, seedHouseh
 import { decideRoute, routeInbound, type SenderContext } from "./inbound";
 
 const person: PersonRow = { id: "p1", phone: "+447700900200", name: "Sam", opted_out_at: null, created_at: "" };
-const household = { id: "h1", name: "The Martins", created_at: "" };
+const household = { id: "h1", name: "The Martins", description: "", created_at: "" };
 const signal: SignalRow = { id: "s1", household_id: "h1", text: "Pickup", source: "sms", status: "open", opened_at: "", solved_at: null, signed_off_person_id: null };
 
 const unknown: SenderContext = {

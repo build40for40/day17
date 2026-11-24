@@ -1,7 +1,7 @@
 import { createExecutionContext, createScheduledController, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { API_BASE, MAX_SIGNAL_LENGTH } from "contract";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearDatabase } from "../../test/db";
 import { isoAgo, now } from "../db";
 import { MAX_BROADCASTS_PER_DAY } from "../limits";
@@ -10,7 +10,7 @@ import { createSessionCookie } from "../session";
 import { clearFakeOutbox, fakeOutbox } from "../sms/fake";
 import { allClear, signalWithCodes, standDown, updateWithCodes, youAreOn } from "../sms/texts";
 import { anastasia, grandma, insertSignal, seedHousehold, signalsOf, stranger, theo } from "./fixtures";
-import { handleCreateSignal, handleInboundSms, handleScheduled, handleSignOff, handleSolveSignal } from "./routes";
+import { handleCreateSignal, handleInboundSms, handleMatchSignal, handleScheduled, handleSignOff, handleSolveSignal } from "./routes";
 
 async function cookieFor(personId: string): Promise<string> {
   return (await createSessionCookie(env, personId)).split(";")[0]!;
@@ -60,7 +60,7 @@ describe("signal routes", () => {
 
       expect(response.status).toBe(201);
       expect(await response.json()).toEqual({
-        signal: { id: expect.any(String), householdId: "h1", text: "Hospital run, need a lift", source: "web", status: "open", openedAt: expect.any(String), solvedAt: null, signedOffPersonId: null },
+        signals: [{ id: expect.any(String), householdId: "h1", text: "Hospital run, need a lift", source: "web", status: "open", openedAt: expect.any(String), solvedAt: null, signedOffPersonId: null }],
       });
       expect(sent()).toEqual([
         { to: grandma.phone, body: signalWithCodes("Anastasia", "Hospital run, need a lift", 1) },
@@ -74,7 +74,7 @@ describe("signal routes", () => {
 
       const response = await asParent(handleCreateSignal, "/signals", { text: "Make it 5:30" });
       expect(response.status).toBe(200);
-      expect(await response.json()).toMatchObject({ signal: { text: "Pickup at 5", status: "open" } });
+      expect(await response.json()).toMatchObject({ signals: [{ text: "Pickup at 5", status: "open" }] });
       expect(sent()).toEqual([
         { to: grandma.phone, body: updateWithCodes("Anastasia", "Make it 5:30", 1) },
         { to: theo.phone, body: updateWithCodes("Anastasia", "Make it 5:30", 1) },
@@ -148,6 +148,63 @@ describe("signal routes", () => {
       expect(solved.status).toBe(200);
       expect(sent()).toEqual([{ to: theo.phone, body: allClear("Anastasia") }]);
       expect((await signalsOf("h1"))[0]?.status).toBe("open");
+    });
+
+    it("sends one ask to every chosen group", async () => {
+      const response = await asParent(handleCreateSignal, "/signals", { text: "Stuck at A&E", householdIds: ["h1", "h2"] });
+
+      expect(response.status).toBe(201);
+      expect(((await response.json()) as { signals: { householdId: string }[] }).signals.map((signal) => signal.householdId)).toEqual(["h1", "h2"]);
+      expect((await signalsOf("h1"))[0]?.text).toBe("Stuck at A&E");
+      expect((await signalsOf("h2"))[0]?.text).toBe("Stuck at A&E");
+      expect(sent().map(({ to }) => to)).toEqual([grandma.phone, theo.phone, theo.phone]);
+    });
+
+    it("sends nothing when no group is chosen", async () => {
+      const response = await asParent(handleCreateSignal, "/signals", { text: "Stuck at A&E", householdIds: [] });
+
+      expect(response.status).toBe(400);
+      expect(sent()).toEqual([]);
+    });
+
+    it("sends to no group when one of them has used up its day", async () => {
+      for (let minute = 1; minute <= 5; minute++) await insertSignal("h2", isoAgo(minute * 60_000), "solved");
+
+      const response = await asParent(handleCreateSignal, "/signals", { text: "Stuck at A&E", householdIds: ["h1", "h2"] });
+
+      expect(await response.json()).toEqual({ error: "too_many_signals" });
+      expect(sent()).toEqual([]);
+    });
+
+    describe("POST /signals/match", () => {
+      afterEach(() => vi.unstubAllGlobals());
+
+      it("scores every group the parent owns", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => Response.json({ answers: { h1: { type: "noul", noul: 0.12 }, h2: { type: "noul", noul: 0.91 } } })));
+
+        const response = await asParent(handleMatchSignal, "/signals/match", { text: "Who's playing at 10?" });
+
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual({
+          matches: [
+            { householdId: "h1", score: 0.12 },
+            { householdId: "h2", score: 0.91 },
+          ],
+        });
+      });
+
+      it("says so when the classifier is down, and guesses nothing", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => Response.json({ detail: "overloaded" }, { status: 529 })));
+
+        const response = await asParent(handleMatchSignal, "/signals/match", { text: "Who's playing at 10?" });
+
+        expect(response.status).toBe(503);
+        expect(await response.json()).toEqual({ error: "classifier_unavailable" });
+      });
+
+      it("needs some text", async () => {
+        expect((await asParent(handleMatchSignal, "/signals/match", { text: " " })).status).toBe(400);
+      });
     });
 
     it("refuses a group that isn't theirs", async () => {

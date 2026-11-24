@@ -5,6 +5,7 @@ import {
   type CreateHouseholdResponse,
   type CreateSignalResponse,
   type ErrorCode,
+  type MatchSignalResponse,
   type HelperInput,
   type MeResponse,
   type RemoveHelperResponse,
@@ -70,8 +71,10 @@ export const removeHelper = (householdId: string, personId: string) =>
     `/households/helpers?personId=${encodeURIComponent(personId)}&id=${encodeURIComponent(householdId)}`,
   )
 
-export const sendSignal = (householdId: string, text: string) =>
-  request<CreateSignalResponse>('POST', '/signals', { householdId, text })
+export const sendSignal = (householdIds: string[], text: string) =>
+  request<CreateSignalResponse>('POST', '/signals', { householdIds, text })
+
+export const matchSignal = (text: string) => request<MatchSignalResponse>('POST', '/signals/match', { text })
 
 export const solveSignal = (householdId: string) =>
   request<SolveSignalResponse>('POST', '/signals/solve', { householdId })

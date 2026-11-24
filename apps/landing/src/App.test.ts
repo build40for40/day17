@@ -33,7 +33,7 @@ describe('App', () => {
   })
 
   it('goes straight home when there is a group', async () => {
-    const household = { id: 'h1', name: 'The Martins', createdAt: '', helpers: [] }
+    const household = { id: 'h1', name: 'The Martins', description: 'Family pickups', createdAt: '', helpers: [] }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(me(household))))
 
     const wrapper = mount(App)
@@ -44,7 +44,7 @@ describe('App', () => {
   })
 
   it('opens the profile page and comes back', async () => {
-    const household = { id: 'h1', name: 'The Martins', createdAt: '', helpers: [] }
+    const household = { id: 'h1', name: 'The Martins', description: 'Family pickups', createdAt: '', helpers: [] }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(me(household))))
 
     const wrapper = mount(App)

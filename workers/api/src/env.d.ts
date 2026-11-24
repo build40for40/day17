@@ -3,6 +3,7 @@ interface Env {
   TURNSTILE_SECRET?: string;
   ALLOW_FAKE_SMS?: string;
   TEXTBELT_KEY?: string;
+  TYPESAFE_API_KEY?: string;
 }
 
 declare namespace Cloudflare {
@@ -10,5 +11,6 @@ declare namespace Cloudflare {
     TURNSTILE_SECRET?: string;
     ALLOW_FAKE_SMS?: string;
     TEXTBELT_KEY?: string;
+    TYPESAFE_API_KEY?: string;
   }
 }

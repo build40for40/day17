@@ -66,6 +66,7 @@ describe("the bat signal, end to end with the fake provider", () => {
     const response = await call("POST", "/households", {
       parentName: "Anastasia",
       householdName: "The Martins",
+      description: "Family pickups and emergencies",
       helpers: [
         { name: "Grandma", phone: GRAN },
         { name: "Theo", phone: THEO },
@@ -101,13 +102,13 @@ describe("the bat signal, end to end with the fake provider", () => {
   it("runs the same signal from the red button", async () => {
     const opened = await call("POST", "/signals", { text: "No nappies left, anyone near Tesco?" });
     expect(opened.status).toBe(201);
-    const { signal } = (await opened.json()) as { signal: Signal };
+    const signal = ((await opened.json()) as { signals: Signal[] }).signals[0]!;
     expect(signal).toMatchObject({ source: "web", status: "open" });
     expect(drain()).toEqual(to([GRAN, CAMILLE], signalWithCodes("Anastasia", "No nappies left, anyone near Tesco?", 1)));
 
     const updated = await call("POST", "/signals", { text: "Size 4 please" });
     expect(updated.status).toBe(200);
-    expect(((await updated.json()) as { signal: Signal }).signal.id).toBe(signal.id);
+    expect(((await updated.json()) as { signals: Signal[] }).signals[0]!.id).toBe(signal.id);
     expect(drain()).toEqual(to([GRAN, CAMILLE], updateWithCodes("Anastasia", "Size 4 please", 1)));
 
     await text(CAMILLE, "Grabbing some now");

@@ -13,6 +13,9 @@ export type RaiseResult =
   | { ok: true; action: "opened" | "updated"; signal: SignalRow; deliveries: Delivery[] }
   | { ok: false; error: RaiseError };
 
+export type Raised = Extract<RaiseResult, { ok: true }>;
+export type RaiseManyResult = { ok: true; raised: Raised[] } | { ok: false; error: RaiseError };
+
 export type SolveResult = { ok: true; signal: SignalRow; deliveries: Delivery[] } | { ok: false; error: "no_open_signal" };
 
 export async function findOwned(env: Env, personId: string): Promise<{ person: PersonRow | null; households: HouseholdRow[] }> {
@@ -41,12 +44,7 @@ export async function raiseSignal(env: Env, owner: Owner, rawText: string, sourc
   if (text.length > MAX_SIGNAL_LENGTH) return { ok: false, error: "signal_too_long" };
 
   const open = await findOpenSignal(env, owner.household.id);
-  if (!open) {
-    const recent = await env.DB.prepare("SELECT COUNT(*) AS count FROM signals WHERE household_id = ? AND opened_at > ?")
-      .bind(owner.household.id, isoAgo(SIGNAL_WINDOW_MS))
-      .first<{ count: number }>();
-    if ((recent?.count ?? 0) >= MAX_SIGNALS_PER_DAY) return { ok: false, error: "too_many_signals" };
-  }
+  if (!open && (await usedUpDay(env, owner.household.id))) return { ok: false, error: "too_many_signals" };
 
   if (!(await take(env.DB, limits.broadcast(owner.person.phone)))) return { ok: false, error: "rate_limited" };
   if (open) return update(env, owner, open, text);
@@ -73,6 +71,34 @@ export async function raiseSignal(env: Env, owner: Owner, rawText: string, sourc
       canReply(env) ? signalWithCodes(senderName(owner), text, code) : relay(senderName(owner), text),
     ),
   };
+}
+
+export async function raiseSignals(
+  env: Env,
+  person: PersonRow,
+  households: HouseholdRow[],
+  text: string,
+  source: SignalSource,
+): Promise<RaiseManyResult> {
+  for (const household of households) {
+    if (!(await findOpenSignal(env, household.id)) && (await usedUpDay(env, household.id))) return { ok: false, error: "too_many_signals" };
+  }
+
+  const raised: Raised[] = [];
+  for (const household of households) {
+    const result = await raiseSignal(env, { person, household }, text, source);
+    if (result.ok) raised.push(result);
+    else if (raised.length === 0) return result;
+    else break;
+  }
+  return { ok: true, raised };
+}
+
+async function usedUpDay(env: Env, householdId: string): Promise<boolean> {
+  const recent = await env.DB.prepare("SELECT COUNT(*) AS count FROM signals WHERE household_id = ? AND opened_at > ?")
+    .bind(householdId, isoAgo(SIGNAL_WINDOW_MS))
+    .first<{ count: number }>();
+  return (recent?.count ?? 0) >= MAX_SIGNALS_PER_DAY;
 }
 
 export async function solveSignal(env: Env, owner: Owner): Promise<SolveResult> {
