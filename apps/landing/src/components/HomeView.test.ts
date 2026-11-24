@@ -75,7 +75,7 @@ describe('HomeView', () => {
     await wrapper.findAll('[data-test="group-tab"]')[1]!.trigger('click')
     expect(wrapper.get('[data-test="group-name"]').text()).toBe('Football')
     expect(wrapper.text()).toContain('Coach')
-    expect(wrapper.text()).not.toContain('Nan')
+    expect(wrapper.findAll('[data-test="helper"]').map((li) => li.text())).not.toContainEqual(expect.stringContaining('Nan'))
 
     await wrapper.get('[data-test="red-button"]').trigger('click')
     await wrapper.get('[data-test="text"]').setValue("Who's playing at 10?")
@@ -106,5 +106,40 @@ describe('HomeView', () => {
     await wrapper.get('[data-test="add-group"]').trigger('click')
 
     expect(wrapper.emitted('add')).toHaveLength(1)
+  })
+
+  it('shows who is in which group, and notes people who are in more than one', async () => {
+    const shared = { id: 'p4', name: 'Grandma Sue', phone: '+447700900113', optedOut: false }
+    const pickup: Group = { ...family, household: { ...family.household, helpers: [...family.household.helpers, shared] } }
+    const sitting: Group = { ...football, household: { ...football.household, name: 'Babysitting', helpers: [shared] } }
+    const wrapper = mount(HomeView, { props: { me: me(null, [pickup, sitting]) } })
+
+    const overview = wrapper.findAll('[data-test="overview-group"]').map((li) => [li.get('button').text(), li.get('span').text()])
+    expect(overview).toEqual([
+      ['The Martins', 'Nan, Grandma Sue'],
+      ['Babysitting', 'Grandma Sue'],
+    ])
+    expect(wrapper.get('[data-test="also-in"]').text()).toBe('Also in Babysitting')
+
+    await wrapper.findAll('[data-test="overview-group"] button')[1]!.trigger('click')
+    expect(wrapper.get('[data-test="group-name"]').text()).toBe('Babysitting')
+    expect(wrapper.get('[data-test="also-in"]').text()).toBe('Also in The Martins')
+  })
+
+  it('hides the overview when there is only one group', () => {
+    const wrapper = mount(HomeView, { props: { me: me(null) } })
+
+    expect(wrapper.find('[data-test="overview"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="also-in"]').exists()).toBe(false)
+  })
+
+  it('tells the parent how many people a signal reaches, leaving out anyone who said STOP', async () => {
+    const quiet = { id: 'p5', name: 'Gone', phone: '+447700900114', optedOut: true }
+    const group: Group = { ...family, household: { ...family.household, helpers: [...family.household.helpers, quiet] } }
+    const wrapper = mount(HomeView, { props: { me: me(null, [group]) } })
+
+    await wrapper.get('[data-test="red-button"]').trigger('click')
+
+    expect(wrapper.get('[data-test="reach"]').text()).toBe('Goes to 1 person in The Martins')
   })
 })

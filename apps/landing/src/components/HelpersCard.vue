@@ -6,7 +6,8 @@ import { addHelper, removeHelper } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
 import PhoneField from './PhoneField.vue'
 
-const props = defineProps<{ household: Household }>()
+// alsoIn maps a helper's phone to the names of the parent's other groups they're in.
+const props = defineProps<{ household: Household; alsoIn?: Record<string, string[]> }>()
 const emit = defineEmits<{ changed: []; expired: [] }>()
 
 const adding = ref(false)
@@ -77,6 +78,9 @@ const remove = (helper: Helper) =>
       <li v-for="helper in props.household.helpers" :key="helper.id" data-test="helper">
         <span>{{ helper.name }}</span>
         <span class="muted">{{ helper.phone }}<template v-if="helper.optedOut"> (said STOP)</template></span>
+        <span v-if="props.alsoIn?.[helper.phone]?.length" class="also-in" data-test="also-in">
+          Also in {{ props.alsoIn[helper.phone]!.join(', ') }}
+        </span>
         <div v-if="removingId === helper.id" class="row confirm">
           <span>Take {{ helper.name }} off the list?</span>
           <button class="danger-btn" type="button" :disabled="busy" data-test="confirm-remove-helper" @click="remove(helper)">

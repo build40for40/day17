@@ -16,6 +16,20 @@ const error = ref('')
 
 const group = computed(() => props.me.groups.find((g) => g.household.id === selectedId.value) ?? props.me.groups[0])
 
+// The same person can be in several of a parent's groups, matched by phone number.
+const alsoIn = computed(() => {
+  const map: Record<string, string[]> = {}
+  for (const helper of group.value?.household.helpers ?? []) {
+    const others = props.me.groups
+      .filter((g) => g.household.id !== group.value?.household.id && g.household.helpers.some((h) => h.phone === helper.phone))
+      .map((g) => g.household.name)
+    if (others.length) map[helper.phone] = others
+  }
+  return map
+})
+
+const reach = computed(() => group.value?.household.helpers.filter((h) => !h.optedOut).length ?? 0)
+
 watch(
   () => props.me.groups.map((g) => g.household.id),
   (ids, previous) => {
@@ -85,6 +99,8 @@ async function remove() {
       :household-id="group.household.id"
       :open-signal="group.openSignal"
       :recipients="group.recipients"
+      :group-name="group.household.name"
+      :reach="reach"
       @changed="emit('changed')"
       @expired="emit('expired')"
     />
@@ -92,9 +108,29 @@ async function remove() {
     <HelpersCard
       :key="group.household.id"
       :household="group.household"
+      :also-in="alsoIn"
       @changed="emit('changed')"
       @expired="emit('expired')"
     />
+
+    <section v-if="props.me.groups.length > 1" class="card" data-test="overview">
+      <h3>Who's in which group</h3>
+      <ul class="overview">
+        <li v-for="g in props.me.groups" :key="g.household.id" data-test="overview-group">
+          <button
+            class="link"
+            type="button"
+            :aria-current="g.household.id === group.household.id ? 'true' : undefined"
+            @click="select(g.household.id)"
+          >
+            {{ g.household.name }}
+          </button>
+          <span class="muted">
+            {{ g.household.helpers.length ? g.household.helpers.map((h) => h.name).join(', ') : 'Nobody yet' }}
+          </span>
+        </li>
+      </ul>
+    </section>
 
     <section class="danger">
       <button v-if="!confirming" class="link quiet" type="button" data-test="delete" @click="confirming = true">
