@@ -59,7 +59,7 @@ describe("the bat signal, end to end with the fake provider", () => {
     expect(cookie.startsWith(`${SESSION_COOKIE}=`)).toBe(true);
 
     const me = (await (await call("GET", "/me")).json()) as MeResponse;
-    expect(me).toMatchObject({ person: { phone: PARENT }, household: null, openSignal: null, signalNumber: null });
+    expect(me).toMatchObject({ person: { phone: PARENT }, groups: [], signalNumber: null });
   });
 
   it("creates a household with three helpers and welcomes each of them", async () => {
@@ -82,7 +82,7 @@ describe("the bat signal, end to end with the fake provider", () => {
     expect((await text(PARENT, "Can anyone grab Leo from school at 5?")).status).toBe(200);
     expect(drain()).toEqual(to([GRAN, THEO, CAMILLE], signalWithCodes("Anastasia", "Can anyone grab Leo from school at 5?", 1)));
     const me = (await (await call("GET", "/me")).json()) as MeResponse;
-    expect(me.openSignal).toMatchObject({ text: "Can anyone grab Leo from school at 5?", source: "sms", status: "open" });
+    expect(me.groups[0]?.openSignal).toMatchObject({ text: "Can anyone grab Leo from school at 5?", source: "sms", status: "open" });
 
     await text(GRAN, "On my way, 10 min");
     expect(drain()).toEqual([{ to: PARENT, body: "Grandma: On my way, 10 min" }]);
@@ -95,7 +95,7 @@ describe("the bat signal, end to end with the fake provider", () => {
 
     await text(PARENT, " Résolu ");
     expect(drain()).toEqual(to([GRAN, CAMILLE], allClear("Anastasia")));
-    expect(((await (await call("GET", "/me")).json()) as MeResponse).openSignal).toBeNull();
+    expect(((await (await call("GET", "/me")).json()) as MeResponse).groups[0]?.openSignal).toBeNull();
   });
 
   it("runs the same signal from the red button", async () => {

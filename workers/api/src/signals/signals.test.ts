@@ -6,7 +6,7 @@ import { clearDatabase } from "../../test/db";
 import { isoAgo } from "../db";
 import { allClear, signalWithCodes, updateWithCodes } from "../sms/texts";
 import { anastasia, camille, grandma, insertSignal, seedHousehold, signalsOf, theo } from "./fixtures";
-import { closeStaleSignals, findOwner, raiseSignal, solveSignal, type Owner } from "./signals";
+import { closeStaleSignals, findOwned, raiseSignal, solveSignal, type Owner } from "./signals";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -18,19 +18,22 @@ describe("signals", () => {
     owner = await seedHousehold("h1", "The Martins", anastasia, [grandma, theo, { ...camille, optedOut: true }]);
   });
 
-  describe("findOwner", () => {
-    it("finds the person and the household they own", async () => {
-      const found = await findOwner(env, anastasia.id);
+  describe("findOwned", () => {
+    it("finds the person and every household they own", async () => {
+      await seedHousehold("h2", "Football", anastasia, [theo]);
+
+      const found = await findOwned(env, anastasia.id);
+
       expect(found.person?.phone).toBe(anastasia.phone);
-      expect(found.household?.id).toBe("h1");
+      expect(found.households.map(({ id }) => id).sort()).toEqual(["h1", "h2"]);
     });
 
     it("gives no household to a helper", async () => {
-      expect(await findOwner(env, grandma.id)).toMatchObject({ person: { id: grandma.id }, household: null });
+      expect(await findOwned(env, grandma.id)).toMatchObject({ person: { id: grandma.id }, households: [] });
     });
 
     it("gives nothing for someone who is gone", async () => {
-      expect(await findOwner(env, "p-gone")).toEqual({ person: null, household: null });
+      expect(await findOwned(env, "p-gone")).toEqual({ person: null, households: [] });
     });
   });
 

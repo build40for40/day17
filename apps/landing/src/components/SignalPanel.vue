@@ -5,7 +5,7 @@ import { MAX_SIGNAL_LENGTH, type RecipientState, type Signal, type SignalRecipie
 import { sendSignal, signOff, solveSignal } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
 
-const props = defineProps<{ openSignal: Signal | null; recipients: SignalRecipient[] }>()
+const props = defineProps<{ householdId: string; openSignal: Signal | null; recipients: SignalRecipient[] }>()
 const emit = defineEmits<{ changed: [signal: Signal | null]; expired: [] }>()
 
 const composing = ref(false)
@@ -45,14 +45,14 @@ function send() {
     error.value = 'Say what you need first.'
     return
   }
-  return run(async () => (await sendSignal(body)).signal)
+  return run(async () => (await sendSignal(props.householdId, body)).signal)
 }
 
-const confirm = (personId: string) => run(async () => (await signOff(personId)).signal)
+const confirm = (personId: string) => run(async () => (await signOff(props.householdId, personId)).signal)
 
 const solve = () =>
   run(async () => {
-    await solveSignal()
+    await solveSignal(props.householdId)
     return null
   })
 </script>

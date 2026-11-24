@@ -11,7 +11,7 @@ export type ErrorCode =
   | "too_many_attempts"
   | "unauthorized"
   | "forbidden"
-  | "already_has_household"
+  | "too_many_households"
   | "no_household"
   | "too_many_helpers"
   | "duplicate_helper"
@@ -76,11 +76,15 @@ export type VerifyStartResponse = OkResponse;
 export type VerifyCheckRequest = { phone: string; code: string };
 export type VerifyCheckResponse = OkResponse;
 
-export type MeResponse = {
-  person: Person;
-  household: Household | null;
+export type Group = {
+  household: Household;
   openSignal: Signal | null;
   recipients: SignalRecipient[];
+};
+
+export type MeResponse = {
+  person: Person;
+  groups: Group[];
   signalNumber: string | null;
 };
 
@@ -93,10 +97,11 @@ export type CreateHouseholdRequest = {
 };
 export type CreateHouseholdResponse = { household: Household };
 
-export type CreateSignalRequest = { text: string };
+export type CreateSignalRequest = { text: string; householdId?: string };
 export type CreateSignalResponse = { signal: Signal };
 
+export type SolveSignalRequest = { householdId?: string };
 export type SolveSignalResponse = { signal: Signal };
 
-export type SignOffRequest = { personId: string };
+export type SignOffRequest = { personId: string; householdId?: string };
 export type SignOffResponse = { signal: Signal };

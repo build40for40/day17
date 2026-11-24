@@ -1,16 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import type { MeResponse } from 'contract'
+import type { Household, MeResponse } from 'contract'
 
 import App from './App.vue'
 
 afterEach(() => vi.unstubAllGlobals())
 
-const me = (household: MeResponse['household']): MeResponse => ({
+const me = (household: Household | null): MeResponse => ({
   person: { id: 'p1', phone: '+447700900001', name: 'Sam' },
-  household,
-  openSignal: null,
-  recipients: [],
+  groups: household ? [{ household, openSignal: null, recipients: [] }] : [],
   signalNumber: null,
 })
 

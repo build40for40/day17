@@ -6,9 +6,10 @@ import { createHousehold } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
 import PhoneField from './PhoneField.vue'
 
-const emit = defineEmits<{ created: []; expired: [] }>()
+const props = defineProps<{ knownName?: string | null }>()
+const emit = defineEmits<{ created: [householdId: string]; expired: []; cancel: [] }>()
 
-const parentName = ref('')
+const parentName = ref(props.knownName ?? '')
 const householdName = ref('')
 let nextId = 0
 const blankHelper = () => ({ id: nextId++, name: '', phone: '' })
@@ -44,12 +45,12 @@ async function submit() {
   error.value = ''
   busy.value = true
   try {
-    await createHousehold({
+    const { household } = await createHousehold({
       parentName: parentName.value.trim(),
       householdName: householdName.value.trim(),
       helpers: result.helpers,
     })
-    emit('created')
+    emit('created', household.id)
   } catch (e) {
     error.value = messageFor(e)
     if (isUnauthorized(e)) emit('expired')
@@ -61,9 +62,9 @@ async function submit() {
 
 <template>
   <form class="card" novalidate @submit.prevent="submit">
-    <h2>Step 3: your people</h2>
+    <h2>{{ props.knownName ? 'A new group' : 'Step 3: your people' }}</h2>
     <p>Who should get the signal? We'll text each of them once to say hello and tell them they can reply STOP.</p>
-    <label>
+    <label v-if="!props.knownName">
       Your name
       <input v-model="parentName" autocomplete="name" :maxlength="MAX_NAME_LENGTH" data-test="parent-name" />
     </label>
@@ -87,6 +88,9 @@ async function submit() {
     </fieldset>
 
     <p v-if="error" class="error" role="alert" data-test="error">{{ error }}</p>
-    <button class="primary" type="submit" :disabled="busy">{{ busy ? 'Saving...' : 'Create my group' }}</button>
+    <div class="row">
+      <button class="primary" type="submit" :disabled="busy">{{ busy ? 'Saving...' : 'Create my group' }}</button>
+      <button v-if="props.knownName" class="link" type="button" data-test="cancel" @click="emit('cancel')">Cancel</button>
+    </div>
   </form>
 </template>

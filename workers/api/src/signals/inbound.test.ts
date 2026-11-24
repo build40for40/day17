@@ -16,6 +16,7 @@ import {
   helperChecking,
   helperRejected,
   nothingOpen,
+  pickGroup,
   rejectReceived,
   signalTooLong,
   signalWithCodes,
@@ -46,6 +47,7 @@ const unknown: SenderContext = {
   signupLinkSent: false,
   alerts: [],
   promptedRecently: false,
+  ownsSeveral: false,
 };
 const parent: SenderContext = { ...unknown, person, owned: { person, household } };
 const helper: SenderContext = { ...unknown, person, helpedHouseholdId: "h2" };
@@ -301,6 +303,20 @@ describe("routeInbound", () => {
 
       clearFakeOutbox();
       expect(await text(anastasia.phone, "Pickup at 5")).toMatchObject({ action: "opened" });
+    });
+
+    it("won't guess between a parent's groups by text, but updates the one with a signal open", async () => {
+      await seedHousehold("h2", "Football", anastasia, [theo]);
+
+      expect(await text(anastasia.phone, "Pickup at 5")).toEqual({ action: "pick_group" });
+      expect(sent()).toEqual([{ to: anastasia.phone, body: pickGroup() }]);
+      expect(await signalsOf("h1")).toHaveLength(0);
+      expect(await signalsOf("h2")).toHaveLength(0);
+
+      await insertSignal("h2", isoAgo(1_000));
+      clearFakeOutbox();
+      expect(await text(anastasia.phone, "Kick off moved to 11")).toMatchObject({ action: "updated" });
+      expect(sent()).toEqual([{ to: theo.phone, body: updateWithCodes("Anastasia", "Kick off moved to 11", 1) }]);
     });
 
     it("gives a helper in two live signals a different code for each", async () => {

@@ -179,3 +179,10 @@ export function codePrompt(alerts: Alert[], ownsHousehold: boolean): string {
     `C'est pour quelle alerte ? Réponds ${french}.${ownsHousehold ? " Pour lancer la tienne, renvoie ton message." : ""}`,
   );
 }
+
+export function pickGroup(): string {
+  return bilingual(
+    `You have more than one group, so pick which one on the page: ${SIGNUP_URL}`,
+    `Tu as plusieurs groupes, alors choisis lequel sur la page : ${SIGNUP_URL}`,
+  );
+}

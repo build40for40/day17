@@ -9,13 +9,13 @@ describe('api client', () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ signal: {} }, { status: 201 }))
     vi.stubGlobal('fetch', fetchMock)
 
-    await sendSignal('help')
+    await sendSignal('h1', 'help')
 
     expect(fetchMock).toHaveBeenCalledWith('/day17/api/v1/signals', {
       method: 'POST',
       credentials: 'include',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text: 'help' }),
+      body: JSON.stringify({ householdId: 'h1', text: 'help' }),
     })
   })
 
@@ -36,6 +36,6 @@ describe('api client', () => {
   it('accepts an empty 204', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })))
 
-    await expect(deleteHousehold()).resolves.toBeUndefined()
+    await expect(deleteHousehold('h1')).resolves.toBeUndefined()
   })
 })

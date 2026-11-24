@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import type { MeResponse, Signal } from 'contract'
+import type { MeResponse } from 'contract'
 
 import { ApiError, getMe } from './api'
 import CodeStep from './components/CodeStep.vue'
@@ -15,12 +15,15 @@ const step = ref<Step>('loading')
 const phone = ref('')
 const me = ref<MeResponse | null>(null)
 const loadError = ref('')
+const adding = ref(false)
+const startAt = ref<string>()
 
 async function load() {
   loadError.value = ''
   try {
     me.value = await getMe()
-    step.value = me.value.household ? 'home' : 'group'
+    adding.value = false
+    step.value = me.value.groups.length > 0 ? 'home' : 'group'
   } catch (e) {
     if (!(e instanceof ApiError) || e.code !== 'unauthorized') loadError.value = messageFor(e)
     step.value = 'phone'
@@ -42,17 +45,13 @@ async function refresh() {
   }
 }
 
-function onSignal(signal: Signal | null) {
-  if (me.value) me.value = { ...me.value, openSignal: signal, recipients: signal ? me.value.recipients : [] }
-  void refresh()
-}
 
 let timer: ReturnType<typeof setInterval> | undefined
 
 onMounted(() => {
   void load()
   timer = setInterval(() => {
-    if (step.value === 'home' && me.value?.openSignal && !document.hidden) void refresh()
+    if (step.value === 'home' && !adding.value && me.value?.groups.some((group) => group.openSignal) && !document.hidden) void refresh()
   }, REFRESH_MS)
 })
 onUnmounted(() => clearInterval(timer))
@@ -76,12 +75,21 @@ onUnmounted(() => clearInterval(timer))
     <PhoneStep v-if="step === 'phone'" @sent="(p) => { phone = p; step = 'code' }" />
     <CodeStep v-else-if="step === 'code'" :phone="phone" @verified="load" @back="step = 'phone'" />
     <GroupStep v-else-if="step === 'group'" @created="load" @expired="signedOut" />
+    <GroupStep
+      v-else-if="step === 'home' && me && adding"
+      :known-name="me.person.name"
+      @created="(id) => { startAt = id; void load() }"
+      @expired="signedOut"
+      @cancel="adding = false"
+    />
     <HomeView
       v-else-if="step === 'home' && me"
       :me="me"
-      @signal="onSignal"
+      :start-at="startAt"
+      @changed="refresh"
       @deleted="load"
       @expired="signedOut"
+      @add="adding = true"
     />
 
     <footer>

@@ -1,8 +1,10 @@
 import {
   MAX_HELPERS,
+  MAX_HOUSEHOLDS,
   MAX_NAME_LENGTH,
   normalisePhone,
   type CreateHouseholdResponse,
+  type Group,
   type Household,
   type HelperInput,
   type MeResponse,
@@ -63,15 +65,18 @@ async function findPerson(env: Env, personId: string): Promise<PersonRow | null>
   return env.DB.prepare("SELECT * FROM people WHERE id = ?").bind(personId).first<PersonRow>();
 }
 
-async function loadOwnedHousehold(env: Env, personId: string): Promise<Household | null> {
-  const row = await env.DB.prepare(
+async function loadOwnedHouseholds(env: Env, personId: string): Promise<Household[]> {
+  const { results } = await env.DB.prepare(
     `SELECT h.* FROM households h JOIN memberships m ON m.household_id = h.id
-     WHERE m.person_id = ? AND m.role = 'owner'`,
+     WHERE m.person_id = ? AND m.role = 'owner'
+     ORDER BY h.created_at, h.id`,
   )
     .bind(personId)
-    .first<HouseholdRow>();
-  if (!row) return null;
+    .all<HouseholdRow>();
+  return Promise.all(results.map((row) => loadHousehold(env, row)));
+}
 
+async function loadHousehold(env: Env, row: HouseholdRow): Promise<Household> {
   const { results } = await env.DB.prepare(
     `SELECT p.id, m.name, p.phone, p.opted_out_at FROM memberships m JOIN people p ON p.id = m.person_id
      WHERE m.household_id = ? AND m.role = 'helper' ORDER BY m.created_at, m.name`,
@@ -99,18 +104,23 @@ export const handleMe: Handler = async (request, env) => {
   const person = await findPerson(env, session.personId);
   if (!person) return error("unauthorized", 401);
 
-  const household = await loadOwnedHousehold(env, person.id);
-  const signalRow = household
-    ? await env.DB.prepare("SELECT * FROM signals WHERE household_id = ? AND status = 'open'")
+  const households = await loadOwnedHouseholds(env, person.id);
+  const groups = await Promise.all(
+    households.map(async (household): Promise<Group> => {
+      const signalRow = await env.DB.prepare("SELECT * FROM signals WHERE household_id = ? AND status = 'open'")
         .bind(household.id)
-        .first<SignalRow>()
-    : null;
+        .first<SignalRow>();
+      return {
+        household,
+        openSignal: signalRow ? toSignal(signalRow) : null,
+        recipients: signalRow ? (await listRecipients(env, signalRow.id)).map((recipient) => toSignalRecipient(recipient, signalRow)) : [],
+      };
+    }),
+  );
 
   return json({
     person: { id: person.id, phone: person.phone, name: person.name },
-    household,
-    openSignal: signalRow ? toSignal(signalRow) : null,
-    recipients: signalRow ? (await listRecipients(env, signalRow.id)).map((recipient) => toSignalRecipient(recipient, signalRow)) : [],
+    groups,
     signalNumber: env.SIGNAL_NUMBER || null,
   } satisfies MeResponse);
 };
@@ -128,7 +138,7 @@ export const handleCreateHousehold: Handler = async (request, env) => {
   if (!validation.ok) return validation.response;
   const { parentName, householdName, helpers } = validation.value;
 
-  if (await loadOwnedHousehold(env, person.id)) return error("already_has_household", 409);
+  if ((await loadOwnedHouseholds(env, person.id)).length >= MAX_HOUSEHOLDS) return error("too_many_households", 409);
   if (!(await take(env.DB, limits.household(person.phone)))) return error("rate_limited", 429);
 
   const householdId = newId();
@@ -138,25 +148,20 @@ export const handleCreateHousehold: Handler = async (request, env) => {
      SELECT ?, id, 'helper', ? FROM people WHERE phone = ?`,
   );
 
-  try {
-    await env.DB.batch([
-      env.DB.prepare("UPDATE people SET name = ? WHERE id = ?").bind(parentName, person.id),
-      env.DB.prepare("INSERT INTO households (id, name) VALUES (?, ?)").bind(householdId, householdName),
-      env.DB.prepare("INSERT INTO memberships (household_id, person_id, role) VALUES (?, ?, 'owner')").bind(
-        householdId,
-        person.id,
-      ),
-      ...helpers.flatMap((helper) => [
-        upsertPerson.bind(newId(), helper.phone),
-        addMember.bind(householdId, helper.name, helper.phone),
-      ]),
-    ]);
-  } catch (cause) {
-    if (cause instanceof Error && cause.message.includes("UNIQUE")) return error("already_has_household", 409);
-    throw cause;
-  }
+  await env.DB.batch([
+    env.DB.prepare("UPDATE people SET name = ? WHERE id = ?").bind(parentName, person.id),
+    env.DB.prepare("INSERT INTO households (id, name) VALUES (?, ?)").bind(householdId, householdName),
+    env.DB.prepare("INSERT INTO memberships (household_id, person_id, role) VALUES (?, ?, 'owner')").bind(
+      householdId,
+      person.id,
+    ),
+    ...helpers.flatMap((helper) => [
+      upsertPerson.bind(newId(), helper.phone),
+      addMember.bind(householdId, helper.name, helper.phone),
+    ]),
+  ]);
 
-  const household = (await loadOwnedHousehold(env, person.id))!;
+  const household = (await loadOwnedHouseholds(env, person.id)).find((owned) => owned.id === householdId)!;
   const recipients = household.helpers.filter((helper) => !helper.optedOut);
   await sendAll(
     env,
@@ -179,8 +184,15 @@ export const handleDeleteHousehold: Handler = async (request, env) => {
   const person = await findPerson(env, session.personId);
   if (!person) return error("unauthorized", 401);
 
-  const household = await loadOwnedHousehold(env, person.id);
-  if (!household) return error("no_household", 404);
+  const households = await loadOwnedHouseholds(env, person.id);
+  const id = new URL(request.url).searchParams.get("id");
+  const household = id ? households.find((owned) => owned.id === id) : households.length === 1 ? households[0] : undefined;
+  if (!household) return error(id || households.length === 0 ? "no_household" : "invalid_request", id || households.length === 0 ? 404 : 400);
+
+  if (households.length > 1) {
+    await env.DB.prepare("DELETE FROM households WHERE id = ?").bind(household.id).run();
+    return noContent();
+  }
 
   await env.DB.batch([
     env.DB.prepare("DELETE FROM households WHERE id = ?").bind(household.id),

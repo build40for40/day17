@@ -14,18 +14,19 @@ export type RaiseResult =
 
 export type SolveResult = { ok: true; signal: SignalRow; deliveries: Delivery[] } | { ok: false; error: "no_open_signal" };
 
-export async function findOwner(env: Env, personId: string): Promise<{ person: PersonRow | null; household: HouseholdRow | null }> {
-  const [person, household] = await env.DB.batch([
+export async function findOwned(env: Env, personId: string): Promise<{ person: PersonRow | null; households: HouseholdRow[] }> {
+  const [person, households] = await env.DB.batch([
     env.DB.prepare("SELECT * FROM people WHERE id = ?").bind(personId),
     env.DB.prepare(
       `SELECT h.* FROM households h
        JOIN memberships m ON m.household_id = h.id
-       WHERE m.person_id = ? AND m.role = 'owner'`,
+       WHERE m.person_id = ? AND m.role = 'owner'
+       ORDER BY h.created_at, h.id`,
     ).bind(personId),
   ]);
   return {
     person: (person?.results[0] as PersonRow | undefined) ?? null,
-    household: (household?.results[0] as HouseholdRow | undefined) ?? null,
+    households: (households?.results ?? []) as HouseholdRow[],
   };
 }
 

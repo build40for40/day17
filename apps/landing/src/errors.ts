@@ -16,7 +16,7 @@ export const errorMessages: Record<ErrorCode | 'network', string> = {
   too_many_attempts: 'Too many wrong guesses. Ask for a fresh code.',
   unauthorized: 'Your session ran out. Sign in again with your number.',
   forbidden: "You're not allowed to do that.",
-  already_has_household: 'You already have a group. One per parent for now.',
+  too_many_households: "That's the most groups one person can have. Delete one to make room.",
   no_household: 'Set up your group first.',
   too_many_helpers: `${MAX_HELPERS} helpers is the limit. Even batman has a short list.`,
   duplicate_helper: 'The same number is on your list twice.',

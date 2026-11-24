@@ -117,6 +117,49 @@ describe("signal routes", () => {
     });
   });
 
+  describe("with several groups", () => {
+    beforeEach(async () => {
+      await seedHousehold("h2", "Football", anastasia, [theo]);
+    });
+
+    it("needs to know which group", async () => {
+      const response = await asParent(handleCreateSignal, "/signals", { text: "Who's playing at 10?" });
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: "invalid_request" });
+      expect(sent()).toEqual([]);
+    });
+
+    it("signals only the chosen group, and each group has its own open signal", async () => {
+      const football = await asParent(handleCreateSignal, "/signals", { text: "Who's playing at 10?", householdId: "h2" });
+      expect(football.status).toBe(201);
+      expect(sent()).toEqual([{ to: theo.phone, body: signalWithCodes("Anastasia", "Who's playing at 10?", 1) }]);
+
+      clearFakeOutbox();
+      const family = await asParent(handleCreateSignal, "/signals", { text: "Pickup at 5", householdId: "h1" });
+      expect(family.status).toBe(201);
+      expect(sent()).toEqual([
+        { to: grandma.phone, body: signalWithCodes("Anastasia", "Pickup at 5", 1) },
+        { to: theo.phone, body: signalWithCodes("Anastasia", "Pickup at 5", 2) },
+      ]);
+
+      clearFakeOutbox();
+      const solved = await asParent(handleSolveSignal, "/signals/solve", { householdId: "h2" });
+      expect(solved.status).toBe(200);
+      expect(sent()).toEqual([{ to: theo.phone, body: allClear("Anastasia") }]);
+      expect((await signalsOf("h1"))[0]?.status).toBe("open");
+    });
+
+    it("refuses a group that isn't theirs", async () => {
+      await seedHousehold("h9", "Someone else", { id: "p-zoe", phone: "+447700900104", name: "Zoe" }, [grandma]);
+
+      const response = await asParent(handleCreateSignal, "/signals", { text: "Hello", householdId: "h9" });
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: "no_household" });
+    });
+  });
+
   describe("POST /signals/solve", () => {
     it("closes the signal and sends the all clear", async () => {
       await asParent(handleCreateSignal, "/signals", { text: "Pickup at 5" });

@@ -19,7 +19,8 @@ export type MessageKind =
   | "dropped_out"
   | "still_needed"
   | "code_prompt"
-  | "sign_off_help";
+  | "sign_off_help"
+  | "pick_group";
 export type MessageStatus = "received" | "sent" | "failed";
 
 export type HouseholdRow = { id: string; name: string; created_at: string };

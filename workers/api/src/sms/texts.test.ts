@@ -3,6 +3,7 @@ import {
   acceptReceived,
   checkingReceived,
   codePrompt,
+  pickGroup,
   droppedOut,
   helperAccepted,
   helperChecking,
@@ -47,6 +48,7 @@ const systemTexts = {
   signOffHelp: signOffHelp([{ name: "Theo", slot: 2 }]),
   signOffHelpEmpty: signOffHelp([]),
   codePrompt: codePrompt([{ name: "Zoe", code: 4 }], true),
+  pickGroup: pickGroup(),
 };
 
 describe("system texts", () => {
