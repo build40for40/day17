@@ -21,7 +21,7 @@ describe("fake provider", () => {
   });
 
   it("parses a plain JSON inbound message", async () => {
-    const message = await provider.verifyAndParseInbound(inbound({ from: "07700 900002", body: "SOLVED", providerId: "abc" }));
+    const message = await provider.verifyAndParseInbound(inbound({ from: "+44 7700 900002", body: "SOLVED", providerId: "abc" }));
     expect(message).toEqual({ from: "+447700900002", body: "SOLVED", providerId: "abc" });
   });
 

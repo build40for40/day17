@@ -43,7 +43,7 @@ describe("verify routes", () => {
   });
 
   it("texts a code and signs the person in with it", async () => {
-    const started = await start("07700 900201");
+    const started = await start("+44 7700 900201");
     expect(started.status).toBe(200);
     expect(await started.json()).toEqual({ ok: true });
 

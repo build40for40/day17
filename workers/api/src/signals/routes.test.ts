@@ -152,7 +152,7 @@ describe("signal routes", () => {
     });
 
     it("routes the text and answers 200", async () => {
-      const response = await inbound({ from: "07700 900100", body: "Pickup at 5", providerId: "in-1" });
+      const response = await inbound({ from: "+44 7700 900100", body: "Pickup at 5", providerId: "in-1" });
 
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({ ok: true });

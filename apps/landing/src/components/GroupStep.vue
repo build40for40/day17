@@ -1,20 +1,23 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { MAX_HELPERS, MAX_NAME_LENGTH, normalisePhone, type HelperInput } from 'contract'
+import { MAX_HELPERS, MAX_NAME_LENGTH, type HelperInput } from 'contract'
 
 import { createHousehold } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
+import PhoneField from './PhoneField.vue'
 
 const emit = defineEmits<{ created: []; expired: [] }>()
 
 const parentName = ref('')
 const householdName = ref('')
-const helpers = ref<HelperInput[]>([{ name: '', phone: '' }])
+let nextId = 0
+const blankHelper = () => ({ id: nextId++, name: '', phone: '' })
+const helpers = ref([blankHelper()])
 const error = ref('')
 const busy = ref(false)
 
 const addHelper = () => {
-  if (helpers.value.length < MAX_HELPERS) helpers.value.push({ name: '', phone: '' })
+  if (helpers.value.length < MAX_HELPERS) helpers.value.push(blankHelper())
 }
 const removeHelper = (index: number) => helpers.value.splice(index, 1)
 
@@ -23,10 +26,10 @@ function validate(): { helpers: HelperInput[] } | string {
   if (helpers.value.length === 0) return 'Add at least one helper. A bat signal needs someone to see it.'
   const cleaned: HelperInput[] = []
   for (const helper of helpers.value) {
-    const phone = normalisePhone(helper.phone)
-    if (!helper.name.trim()) return 'Every helper needs a name.'
-    if (!phone) return `"${helper.phone}" doesn't look like a phone number. Try 07700 900123.`
-    cleaned.push({ name: helper.name.trim(), phone })
+    const name = helper.name.trim()
+    if (!name) return 'Every helper needs a name.'
+    if (!helper.phone) return `${name}'s number doesn't look like a phone number. Check the country code and the digits.`
+    cleaned.push({ name, phone: helper.phone })
   }
   if (new Set(cleaned.map((h) => h.phone)).size !== cleaned.length) return 'The same number is on your list twice.'
   return { helpers: cleaned }
@@ -71,9 +74,9 @@ async function submit() {
 
     <fieldset>
       <legend>Helpers ({{ helpers.length }} of {{ MAX_HELPERS }})</legend>
-      <div v-for="(helper, index) in helpers" :key="index" class="helper" data-test="helper-row">
+      <div v-for="(helper, index) in helpers" :key="helper.id" class="helper" data-test="helper-row">
         <input v-model="helper.name" placeholder="Name" aria-label="Helper name" :maxlength="MAX_NAME_LENGTH" />
-        <input v-model="helper.phone" type="tel" inputmode="tel" placeholder="Phone" aria-label="Helper phone" />
+        <PhoneField v-model="helper.phone" label="Helper phone" />
         <button class="link" type="button" aria-label="Remove helper" data-test="remove" @click="removeHelper(index)">
           Remove
         </button>

@@ -1,9 +1,21 @@
 const E164 = /^\+[1-9]\d{7,14}$/;
 
-export const SUPPORTED_COUNTRY_CODES = ["44", "33"] as const;
+export const COUNTRIES = [
+  { iso: "GB", dial: "44", name: "United Kingdom", flag: "🇬🇧", example: "7700 900123" },
+  { iso: "FR", dial: "33", name: "France", flag: "🇫🇷", example: "6 12 34 56 78" },
+] as const;
+
+export type Country = (typeof COUNTRIES)[number];
+export type CountryIso = Country["iso"];
+
+export const SUPPORTED_COUNTRY_CODES = COUNTRIES.map((country) => country.dial);
 
 export function isE164(value: string): boolean {
   return E164.test(value);
+}
+
+export function countryOf(phone: string): Country | null {
+  return COUNTRIES.find((country) => phone.startsWith(`+${country.dial}`)) ?? null;
 }
 
 export function normalisePhone(input: string): string | null {
@@ -13,12 +25,19 @@ export function normalisePhone(input: string): string | null {
   let phone: string;
   if (compact.startsWith("+")) phone = compact;
   else if (compact.startsWith("00")) phone = `+${compact.slice(2)}`;
-  else if (compact.startsWith("0")) phone = `+44${compact.slice(1)}`;
   else return null;
 
-  // "+44 (0)7700 900123" keeps the UK trunk zero once the brackets are gone.
-  if (phone.startsWith("+440")) phone = `+44${phone.slice(4)}`;
+  // "+44 (0)7700 900123" and "+33 (0)6 12 34 56 78" keep the trunk zero once the brackets are gone.
+  const country = countryOf(phone);
+  if (!country) return null;
+  const national = phone.slice(country.dial.length + 1).replace(/^0/, "");
+  phone = `+${country.dial}${national}`;
 
-  const supported = SUPPORTED_COUNTRY_CODES.some((code) => phone.startsWith(`+${code}`));
-  return supported && isE164(phone) ? phone : null;
+  return isE164(phone) ? phone : null;
+}
+
+export function composePhone(dial: string, national: string): string | null {
+  const trimmed = national.trim();
+  if (trimmed.startsWith("+") || trimmed.startsWith("00")) return normalisePhone(trimmed);
+  return normalisePhone(`+${dial}${trimmed}`);
 }

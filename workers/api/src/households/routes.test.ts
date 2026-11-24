@@ -87,7 +87,7 @@ describe("POST /households", () => {
       "/households",
       "parent",
       valid([
-        { name: "Gran", phone: "07700 900002" },
+        { name: "Gran", phone: "+44 7700 900002" },
         { name: "Pat", phone: NEIGHBOUR },
       ]),
     );
@@ -124,7 +124,7 @@ describe("POST /households", () => {
       "duplicate helpers",
       valid([
         { name: "Gran", phone: GRAN },
-        { name: "Gran again", phone: "07700 900002" },
+        { name: "Gran again", phone: "+44 7700 900002" },
       ]),
       "duplicate_helper",
     ],
@@ -181,7 +181,7 @@ describe("POST /households", () => {
   });
 
   it("refuses the signal number as a helper", async () => {
-    const response = await call("POST", "/households", "parent", valid([{ name: "Bot", phone: "07700 900777" }]), { SIGNAL_NUMBER: "+447700900777" });
+    const response = await call("POST", "/households", "parent", valid([{ name: "Bot", phone: "+44 7700 900777" }]), { SIGNAL_NUMBER: "+447700900777" });
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "invalid_phone" });
     expect(fakeOutbox()).toEqual([]);

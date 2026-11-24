@@ -45,7 +45,7 @@ describe("the bat signal, end to end with the fake provider", () => {
   });
 
   it("signs the parent in with a code sent by SMS", async () => {
-    expect((await call("POST", "/verify/start", { phone: "07700 900300" })).status).toBe(200);
+    expect((await call("POST", "/verify/start", { phone: "+44 7700 900300" })).status).toBe(200);
 
     const [codeText, ...rest] = drain();
     expect(rest).toEqual([]);
