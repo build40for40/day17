@@ -2,7 +2,7 @@
 
 Day 17 of 40 for 40, built live on Twitch on Tuesday 24 November 2026. The problem is "Buried neighbourhood favour requests", from Anastasia. The answer is a "bat signal": one named ask, sent to a group of helpers by SMS or phone call. Work is tracked on the Superthread `day17` board and the "Day 17 - plan & brief" page.
 
-- **Form factor:** SMS and phone calls out, with a web page for sign-up and for sending the signal. No native app and no WhatsApp for now.
+- **Form factor:** agent. It reaches people by SMS and phone calls, with a web page for sign-up and for sending the signal. No native app and no WhatsApp for now.
 - **Name:** TBC. The repo, the Workers and the URL path are all `day17` until the app has one.
 
 ## Layout
