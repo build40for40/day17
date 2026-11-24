@@ -4,6 +4,9 @@ import { MAX_SIGNAL_LENGTH, type RecipientState, type Signal, type SignalRecipie
 
 import { sendSignal, signOff, solveSignal } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
+import lanternAlert from '../assets/lantern-alert.jpg'
+import lanternRunning from '../assets/lantern-running.jpg'
+import lanternSleep from '../assets/lantern-sleep.jpg'
 
 const props = defineProps<{
   householdId: string
@@ -36,6 +39,9 @@ const STATE_LABELS: Record<RecipientState, string> = {
 }
 const labelFor = (recipient: SignalRecipient) => (recipient.signedOff ? 'On it' : STATE_LABELS[recipient.state])
 const onIt = computed(() => props.recipients.find((recipient) => recipient.signedOff))
+
+// Asleep with nothing open, alarmed while the signal is up, running once someone's on it.
+const lantern = computed(() => (!props.openSignal ? lanternSleep : onIt.value ? lanternRunning : lanternAlert))
 
 async function run(action: () => Promise<Signal | null>) {
   busy.value = true
@@ -73,8 +79,13 @@ const solve = () =>
 <template>
   <section class="card signal" :class="{ live: openSignal }">
     <template v-if="openSignal">
-      <p class="eyebrow" data-test="stage">{{ onIt ? `${onIt.name} is on it` : 'Signal is up' }}</p>
-      <p class="ask" data-test="open-text">{{ openSignal.text }}</p>
+      <div class="card-head">
+        <img class="lantern" :src="lantern" alt="" data-test="lantern" />
+        <div>
+          <p class="eyebrow" data-test="stage">{{ onIt ? `${onIt.name} is on it` : 'Signal is up' }}</p>
+          <p class="ask" data-test="open-text">{{ openSignal.text }}</p>
+        </div>
+      </div>
       <ul v-if="recipients.length" class="replies">
         <li v-for="recipient in recipients" :key="recipient.personId" :class="recipient.signedOff ? 'on-it' : recipient.state" data-test="recipient">
           <span>{{ recipient.name }}</span>
@@ -94,7 +105,11 @@ const solve = () =>
       <button class="solved" type="button" :disabled="busy" data-test="solve" @click="solve">Solved</button>
     </template>
 
-    <button v-else-if="!composing" class="red" type="button" data-test="red-button" @click="composing = true">
+    <div v-else-if="!composing" class="card-head">
+      <img class="lantern" :src="lantern" alt="" data-test="lantern" />
+      <p class="muted">All quiet. Light the signal when you need your people.</p>
+    </div>
+    <button v-if="!openSignal && !composing" class="red" type="button" data-test="red-button" @click="composing = true">
       Send the signal
     </button>
 

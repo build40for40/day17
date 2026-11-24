@@ -117,4 +117,18 @@ describe('SignalPanel', () => {
 
     expect(wrapper.get('[data-test="error"]').text()).toContain('24 hours')
   })
+
+  it('shows the lantern asleep, alarmed, then running once someone is on it', async () => {
+    const recipient: SignalRecipient = { personId: 'p2', name: 'Nan', state: 'accepted', signedOff: false }
+    const wrapper = mount(SignalPanel, { props: { householdId: 'h1', openSignal: null, recipients: [] } })
+    const lantern = () => wrapper.get('[data-test="lantern"]').attributes('src')
+
+    expect(lantern()).toContain('lantern-sleep')
+
+    await wrapper.setProps({ openSignal: signal, recipients: [recipient] })
+    expect(lantern()).toContain('lantern-alert')
+
+    await wrapper.setProps({ recipients: [{ ...recipient, signedOff: true }] })
+    expect(lantern()).toContain('lantern-running')
+  })
 })

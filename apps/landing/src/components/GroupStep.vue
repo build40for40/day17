@@ -5,6 +5,7 @@ import { MAX_HELPERS, MAX_NAME_LENGTH, type HelperInput } from 'contract'
 import { createHousehold } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
 import PhoneField from './PhoneField.vue'
+import lanternThumbs from '../assets/lantern-thumbs.jpg'
 
 const props = defineProps<{ knownName?: string | null }>()
 const emit = defineEmits<{ created: [householdId: string]; expired: []; cancel: [] }>()
@@ -62,7 +63,10 @@ async function submit() {
 
 <template>
   <form class="card" novalidate @submit.prevent="submit">
-    <h2>{{ props.knownName ? 'A new group' : 'Step 3: your people' }}</h2>
+    <div class="card-head">
+      <img class="lantern" :src="lanternThumbs" alt="" />
+      <h2>{{ props.knownName ? 'A new group' : 'Step 3: your people' }}</h2>
+    </div>
     <p>Who should get the signal? We'll text each of them once to say hello. If someone wants out, they'll ask you.</p>
     <label v-if="!props.knownName">
       Your name

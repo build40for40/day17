@@ -9,6 +9,7 @@ import HomeView from './components/HomeView.vue'
 import PhoneStep from './components/PhoneStep.vue'
 import ProfileView from './components/ProfileView.vue'
 import { messageFor } from './errors'
+import lanternHug from './assets/lantern-hug.jpg'
 
 type Step = 'loading' | 'phone' | 'code' | 'group' | 'home'
 
@@ -84,6 +85,7 @@ onUnmounted(() => {
     <h1>A bat signal for when the day falls apart.</h1>
 
     <template v-if="step === 'phone' || step === 'code'">
+      <div class="welcome-lantern"><img class="lantern" :src="lanternHug" alt="A paper lantern hugging a small child" /></div>
       <p class="pitch">
         Hospital run, no nappies, stuck at work at pickup time. Send one ask and everyone you trust gets a text at once.
         No app to install, and it works on grandma's phone too.
