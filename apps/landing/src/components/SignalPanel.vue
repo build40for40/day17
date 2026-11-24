@@ -4,6 +4,8 @@ import { MAX_SIGNAL_LENGTH, type Signal } from 'contract'
 
 import { sendSignal, solveSignal } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
+import lanternAlert from '../assets/lantern-alert.jpg'
+import lanternSleep from '../assets/lantern-sleep.jpg'
 
 defineProps<{ openSignal: Signal | null }>()
 const emit = defineEmits<{ changed: [signal: Signal | null]; expired: [] }>()
@@ -48,8 +50,16 @@ const solve = () =>
 
 <template>
   <section class="card signal" :class="{ live: openSignal }">
+    <div class="card-head">
+      <img class="lantern" :src="openSignal ? lanternAlert : lanternSleep" alt="" />
+      <div>
+        <p v-if="openSignal" class="eyebrow">Signal is up</p>
+        <h3 v-else>All quiet</h3>
+        <p v-if="!openSignal" class="muted">Your heroes are on standby. Press the button when you need them.</p>
+      </div>
+    </div>
+
     <template v-if="openSignal">
-      <p class="eyebrow">Signal is up</p>
       <p class="ask" data-test="open-text">{{ openSignal.text }}</p>
       <button class="solved" type="button" :disabled="busy" data-test="solve" @click="solve">Solved</button>
     </template>

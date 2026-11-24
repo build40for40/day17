@@ -59,7 +59,7 @@ async function resend() {
 
 <template>
   <form class="card" novalidate @submit.prevent="submit">
-    <h2>Step 2: the code</h2>
+    <h2>Check your texts</h2>
     <p>We texted a {{ CODE_LENGTH }} digit code to {{ phone }}.</p>
     <label>
       Code

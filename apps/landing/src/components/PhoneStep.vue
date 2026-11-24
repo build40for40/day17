@@ -4,7 +4,7 @@ import { startVerification } from '../api'
 import { errorMessages, messageFor } from '../errors'
 import PhoneField from './PhoneField.vue'
 
-const emit = defineEmits<{ sent: [phone: string] }>()
+const emit = defineEmits<{ sent: [phone: string]; signUp: [] }>()
 
 const phone = ref('')
 const error = ref('')
@@ -30,7 +30,7 @@ async function submit() {
 
 <template>
   <form class="card" novalidate @submit.prevent="submit">
-    <h2>Step 1: your number</h2>
+    <h2>Welcome back</h2>
     <p>We text you a code so we know it's really you. No passwords, no accounts to remember.</p>
     <div class="field">
       <span>Your mobile number</span>
@@ -38,5 +38,6 @@ async function submit() {
     </div>
     <p v-if="error" class="error" role="alert" data-test="error">{{ error }}</p>
     <button class="primary" type="submit" :disabled="busy">{{ busy ? 'Sending...' : 'Text me a code' }}</button>
+    <button class="link" type="button" data-test="sign-up" @click="emit('signUp')">New here? Set up your signal</button>
   </form>
 </template>

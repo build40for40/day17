@@ -43,7 +43,7 @@ async function remove() {
     />
 
     <section class="card">
-      <h3>Your helpers</h3>
+      <h3>Your heroes</h3>
       <ul class="helpers">
         <li v-for="helper in props.me.household.helpers" :key="helper.id">
           <span>{{ helper.name }}</span>
