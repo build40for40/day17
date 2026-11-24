@@ -798,42 +798,59 @@ main.wide {
   border-radius: 0.85rem;
 }
 
+/* Wide screens: even gutters, the form beside the pictures, the steps across underneath. */
 @media (min-width: 56rem) {
+  main.wide {
+    padding: 2.5rem clamp(1.5rem, 5vw, 3.5rem) 3rem;
+  }
+
   .welcome {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 25rem);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
     grid-template-rows: auto auto 1fr auto;
     grid-template-areas:
       'title scenes'
       'pitch scenes'
       'form scenes'
       'how how';
-    column-gap: 3rem;
-    row-gap: 1.25rem;
+    column-gap: clamp(2.5rem, 5vw, 4.5rem);
+    row-gap: 1.5rem;
     align-items: start;
   }
 
-  /* The form sits beside the pictures so it's in view without scrolling; the steps run across underneath. */
   .welcome-form .card {
     margin-bottom: 0;
+    padding: 1.6rem 1.75rem;
   }
 
-  .how {
-    margin-top: 1rem;
-  }
-
-  .how ol {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1.5rem;
-  }
-
+  /* Centred against the headline, pitch and form, so neither column leaves a gap at the bottom. */
   .scenes {
+    align-self: center;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.9rem;
+    gap: 1.75rem 1.5rem;
     font-size: 0.95rem;
+  }
+
+  .scenes li {
+    gap: 0.6rem;
   }
 
   .scenes img {
     border-width: 4px;
     border-radius: 1.5rem;
+  }
+
+  .how {
+    margin-top: 1.5rem;
+    gap: 1.25rem;
+    padding: 1.75rem 2rem;
+  }
+
+  .how ol {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2.25rem;
+  }
+
+  .tip {
+    justify-self: start;
   }
 }
