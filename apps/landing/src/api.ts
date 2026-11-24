@@ -5,6 +5,7 @@ import {
   type CreateSignalResponse,
   type ErrorCode,
   type MeResponse,
+  type SignOffResponse,
   type SolveSignalResponse,
 } from 'contract'
 
@@ -52,3 +53,5 @@ export const deleteHousehold = () => request<void>('DELETE', '/households/mine')
 export const sendSignal = (text: string) => request<CreateSignalResponse>('POST', '/signals', { text })
 
 export const solveSignal = () => request<SolveSignalResponse>('POST', '/signals/solve')
+
+export const signOff = (personId: string) => request<SignOffResponse>('POST', '/signals/sign-off', { personId })

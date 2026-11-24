@@ -1,7 +1,7 @@
 import { API_BASE } from "contract";
 import { handleCreateHousehold, handleDeleteHousehold, handleMe } from "./households/routes";
 import { error, type Handler } from "./http";
-import { handleCreateSignal, handleInboundSms, handleScheduled, handleSolveSignal } from "./signals/routes";
+import { handleCreateSignal, handleInboundSms, handleScheduled, handleSignOff, handleSolveSignal } from "./signals/routes";
 import { handleVerifyCheck, handleVerifyStart } from "./verify/routes";
 
 type Method = "GET" | "POST" | "DELETE";
@@ -14,6 +14,7 @@ const routes: Record<string, Partial<Record<Method, Handler>>> = {
   "/households/mine": { DELETE: handleDeleteHousehold },
   "/signals": { POST: handleCreateSignal },
   "/signals/solve": { POST: handleSolveSignal },
+  "/signals/sign-off": { POST: handleSignOff },
   "/sms/inbound": { POST: handleInboundSms },
 };
 

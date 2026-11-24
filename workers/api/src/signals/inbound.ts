@@ -1,11 +1,17 @@
-import { normalisePhone } from "contract";
-import { newId, now, type HouseholdRow, type PersonRow, type SignalRow } from "../db";
+import { normalisePhone, type RecipientState } from "contract";
+import { isoAgo, newId, now, type HouseholdRow, type PersonRow, type SignalRow } from "../db";
 import { limits, take } from "../limits";
 import type { InboundSms } from "../sms/provider";
 import type { Delivery } from "../sms/send";
-import { nothingOpen, relay, signalTooLong, signupLink, tooManySignals, tooManyTexts } from "../sms/texts";
+import { codePrompt, nothingOpen, relay, signalTooLong, signOffHelp, signupLink, tooManySignals, tooManyTexts } from "../sms/texts";
 import { isSolveKeyword, isStopKeyword } from "./keywords";
-import { raiseSignal, solveSignal, type Owner, type RaiseError } from "./signals";
+import { applyReply, signOff } from "./recipients";
+import { parseReply, parseSignOff, type Answer } from "./replies";
+import { raiseSignal, senderName, solveSignal, type Owner, type RaiseError } from "./signals";
+
+const PROMPT_WINDOW_MS = 10 * 60_000;
+
+export type Alert = { signal: SignalRow; code: number; state: RecipientState; parentName: string };
 
 export type SenderContext = {
   person: PersonRow | null;
@@ -15,6 +21,8 @@ export type SenderContext = {
   helperName: string | null;
   helpedHouseholdId: string | null;
   signupLinkSent: boolean;
+  alerts: Alert[];
+  promptedRecently: boolean;
 };
 
 export type Route =
@@ -23,6 +31,9 @@ export type Route =
   | { kind: "update" }
   | { kind: "solve" }
   | { kind: "relay"; signal: SignalRow }
+  | { kind: "reply"; alert: Alert; answer: Answer; note: string }
+  | { kind: "sign_off"; slot: number | null }
+  | { kind: "code_prompt" }
   | { kind: "nothing_open" }
   | { kind: "signup_link" }
   | { kind: "ignore"; reason: "signup_link_already_sent" | "empty" | "nothing_to_solve" };
@@ -32,6 +43,10 @@ export type InboundOutcome =
   | { action: "opted_out" }
   | { action: "opened" | "updated" | "solved"; signalId: string }
   | { action: "relayed"; signalId: string; householdId: string }
+  | { action: "replied"; signalId: string; state: RecipientState }
+  | { action: "signed_off"; signalId: string }
+  | { action: "sign_off_refused" }
+  | { action: "code_prompt" }
   | { action: "refused"; reason: Exclude<RaiseError, "invalid_request"> }
   | { action: "nothing_open" }
   | { action: "signup_link" }
@@ -55,7 +70,23 @@ export function decideRoute(context: SenderContext, body: string): Route {
   if (!known) return context.signupLinkSent ? { kind: "ignore", reason: "signup_link_already_sent" } : { kind: "signup_link" };
   if (!body.trim()) return { kind: "ignore", reason: "empty" };
 
-  if (context.ownedOpenSignal) return isSolveKeyword(body) ? { kind: "solve" } : { kind: "update" };
+  const reply = parseReply(body);
+  if (reply) {
+    const alert = reply.code === null ? context.alerts[0] : context.alerts.find((candidate) => candidate.code === reply.code);
+    if (reply.code === null && context.alerts.length > 1) return { kind: "code_prompt" };
+    return alert ? { kind: "reply", alert, answer: reply.answer, note: reply.note } : { kind: "nothing_open" };
+  }
+
+  if (context.ownedOpenSignal) {
+    if (isSolveKeyword(body)) return { kind: "solve" };
+    const signedOff = parseSignOff(body);
+    if (signedOff) return { kind: "sign_off", slot: signedOff.slot };
+  }
+
+  const unanswered = context.alerts.some((alert) => alert.state === "not_read" || alert.state === "pending");
+  if (context.owned && unanswered && !context.promptedRecently) return { kind: "code_prompt" };
+
+  if (context.ownedOpenSignal) return { kind: "update" };
   if (context.owned) return isSolveKeyword(body) ? { kind: "ignore", reason: "nothing_to_solve" } : { kind: "open" };
   if (context.helpedOpenSignal) return { kind: "relay", signal: context.helpedOpenSignal };
   return { kind: "nothing_open" };
@@ -71,8 +102,9 @@ export async function routeInbound(env: Env, sms: InboundSms): Promise<InboundRe
   const { person, owned } = context;
   const known = owned !== null || context.helpedHouseholdId !== null;
 
-  const householdId = route.kind === "relay" ? route.signal.household_id : (owned?.household.id ?? context.helpedHouseholdId);
-  const signalId = route.kind === "relay" ? route.signal.id : (context.ownedOpenSignal?.id ?? null);
+  const about = route.kind === "relay" ? route.signal : route.kind === "reply" ? route.alert.signal : null;
+  const householdId = about?.household_id ?? owned?.household.id ?? context.helpedHouseholdId;
+  const signalId = about?.id ?? context.ownedOpenSignal?.id ?? null;
 
   const messageId = newId();
   const recorded = await env.DB.prepare(
@@ -135,14 +167,51 @@ async function act(env: Env, context: SenderContext, route: Route, sms: InboundS
       return { outcome: { action: "solved", signalId: result.signal.id }, deliveries: result.deliveries };
     }
 
+    case "reply": {
+      const { signal, parentName } = route.alert;
+      const parent = await findParent(env, signal.household_id);
+      const { state, deliveries } = await applyReply(env, signal, parent, parentName, person!.id, route.answer, route.note);
+      return { outcome: { action: "replied", signalId: signal.id, state }, deliveries };
+    }
+
+    case "sign_off": {
+      const signal = context.ownedOpenSignal!;
+      const result = await signOff(env, signal, senderName(owned!), route.slot === null ? null : { slot: route.slot });
+      if (result.ok) return { outcome: { action: "signed_off", signalId: signal.id }, deliveries: result.deliveries };
+      return {
+        outcome: { action: "sign_off_refused" },
+        deliveries: [
+          {
+            to: sms.from,
+            body: signOffHelp(result.offers),
+            kind: "sign_off_help",
+            householdId: signal.household_id,
+            signalId: signal.id,
+            personId: person!.id,
+          },
+        ],
+      };
+    }
+
+    case "code_prompt":
+      return {
+        outcome: { action: "code_prompt" },
+        deliveries: [
+          {
+            to: sms.from,
+            body: codePrompt(
+              context.alerts.map((alert) => ({ name: alert.parentName, code: alert.code })),
+              owned !== null,
+            ),
+            kind: "code_prompt",
+            householdId: null,
+            personId: person!.id,
+          },
+        ],
+      };
+
     case "relay": {
-      const parent = await env.DB.prepare(
-        `SELECT p.* FROM people p
-         JOIN memberships m ON m.person_id = p.id
-         WHERE m.household_id = ? AND m.role = 'owner' AND p.opted_out_at IS NULL`,
-      )
-        .bind(route.signal.household_id)
-        .first<PersonRow>();
+      const parent = await findParent(env, route.signal.household_id);
       const outcome: InboundOutcome = { action: "relayed", signalId: route.signal.id, householdId: route.signal.household_id };
       if (!parent) return nothing(outcome);
       return {
@@ -178,6 +247,16 @@ async function act(env: Env, context: SenderContext, route: Route, sms: InboundS
   }
 }
 
+function findParent(env: Env, householdId: string): Promise<PersonRow | null> {
+  return env.DB.prepare(
+    `SELECT p.* FROM people p
+     JOIN memberships m ON m.person_id = p.id
+     WHERE m.household_id = ? AND m.role = 'owner' AND p.opted_out_at IS NULL`,
+  )
+    .bind(householdId)
+    .first<PersonRow>();
+}
+
 async function loadContext(env: Env, phone: string): Promise<SenderContext> {
   const signupLink = env.DB.prepare("SELECT 1 FROM messages WHERE phone = ? AND kind = 'signup_link' LIMIT 1").bind(phone);
   const person = await env.DB.prepare("SELECT * FROM people WHERE phone = ?").bind(phone).first<PersonRow>();
@@ -192,10 +271,12 @@ async function loadContext(env: Env, phone: string): Promise<SenderContext> {
       helperName: null,
       helpedHouseholdId: null,
       signupLinkSent: sent !== null,
+      alerts: [],
+      promptedRecently: false,
     };
   }
 
-  const [owned, ownedOpen, helpedOpen, helped, sent] = await env.DB.batch([
+  const [owned, ownedOpen, helpedOpen, helped, sent, alerts, lastOutbound] = await env.DB.batch([
     env.DB.prepare(
       `SELECT h.* FROM households h
        JOIN memberships m ON m.household_id = h.id
@@ -220,7 +301,21 @@ async function loadContext(env: Env, phone: string): Promise<SenderContext> {
        LIMIT 1`,
     ).bind(person.id),
     signupLink,
+    env.DB.prepare(
+      `SELECT s.*, sr.code, sr.state, COALESCE(po.name, h.name) AS parent_name
+       FROM signal_recipients sr
+       JOIN signals s ON s.id = sr.signal_id AND s.status = 'open'
+       JOIN households h ON h.id = s.household_id
+       LEFT JOIN memberships mo ON mo.household_id = h.id AND mo.role = 'owner'
+       LEFT JOIN people po ON po.id = mo.person_id
+       WHERE sr.person_id = ?
+       ORDER BY s.opened_at DESC`,
+    ).bind(person.id),
+    env.DB.prepare("SELECT kind, created_at FROM messages WHERE phone = ? AND direction = 'out' ORDER BY created_at DESC, rowid DESC LIMIT 1").bind(
+      person.phone,
+    ),
   ]);
+  const last = lastOutbound?.results[0] as { kind: string; created_at: string } | undefined;
 
   const household = owned?.results[0] as HouseholdRow | undefined;
   const { helper_name: helperName = null, ...helpedOpenSignal } = (helpedOpen?.results[0] ?? {}) as Partial<SignalRow & { helper_name: string | null }>;
@@ -232,5 +327,9 @@ async function loadContext(env: Env, phone: string): Promise<SenderContext> {
     helperName,
     helpedHouseholdId: (helped?.results[0] as { household_id: string } | undefined)?.household_id ?? null,
     signupLinkSent: (sent?.results.length ?? 0) > 0,
+    alerts: ((alerts?.results ?? []) as (SignalRow & { code: number; state: RecipientState; parent_name: string })[]).map(
+      ({ code, state, parent_name: parentName, ...signal }) => ({ signal, code, state, parentName }),
+    ),
+    promptedRecently: last?.kind === "code_prompt" && last.created_at > isoAgo(PROMPT_WINDOW_MS),
   };
 }

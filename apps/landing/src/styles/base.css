@@ -290,3 +290,41 @@ footer {
 footer a {
   color: var(--signal);
 }
+
+.replies {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.replies li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+
+.replies .state {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.replies .pending .state {
+  color: var(--signal);
+}
+
+.replies .accepted .state,
+.replies .on-it .state {
+  color: var(--ok);
+}
+
+.replies .on-it {
+  font-weight: 700;
+}
+
+.replies .link {
+  flex-basis: 100%;
+  text-align: left;
+}

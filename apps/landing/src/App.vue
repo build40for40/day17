@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import type { MeResponse, Signal } from 'contract'
 
 import { ApiError, getMe } from './api'
@@ -32,11 +32,30 @@ function signedOut() {
   step.value = 'phone'
 }
 
-function onSignal(signal: Signal | null) {
-  if (me.value) me.value = { ...me.value, openSignal: signal }
+const REFRESH_MS = 8000
+
+async function refresh() {
+  try {
+    me.value = await getMe()
+  } catch (e) {
+    if (e instanceof ApiError && e.code === 'unauthorized') signedOut()
+  }
 }
 
-onMounted(load)
+function onSignal(signal: Signal | null) {
+  if (me.value) me.value = { ...me.value, openSignal: signal, recipients: signal ? me.value.recipients : [] }
+  void refresh()
+}
+
+let timer: ReturnType<typeof setInterval> | undefined
+
+onMounted(() => {
+  void load()
+  timer = setInterval(() => {
+    if (step.value === 'home' && me.value?.openSignal && !document.hidden) void refresh()
+  }, REFRESH_MS)
+})
+onUnmounted(() => clearInterval(timer))
 </script>
 
 <template>

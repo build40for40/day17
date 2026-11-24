@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  acceptReceived,
+  checkingReceived,
+  codePrompt,
+  droppedOut,
+  helperAccepted,
+  helperChecking,
+  helperRejected,
+  rejectReceived,
+  signOffHelp,
+  standby,
+  standDown,
+  youAreOn,
   allClear,
   nothingOpen,
   relay,
@@ -21,6 +33,20 @@ const systemTexts = {
   signalTooLong: signalTooLong(),
   tooManySignals: tooManySignals(),
   tooManyTexts: tooManyTexts(),
+  acceptReceived: acceptReceived("Anastasia"),
+  checkingReceived: checkingReceived("Anastasia", 4),
+  rejectReceived: rejectReceived("Anastasia"),
+  helperAccepted: helperAccepted("Grandma", 2),
+  helperChecking: helperChecking("Grandma"),
+  helperRejected: helperRejected("Grandma"),
+  youAreOn: youAreOn("Anastasia", 4),
+  standby: standby("Anastasia", "Grandma"),
+  standDown: standDown("Anastasia", "Grandma"),
+  droppedOut: droppedOut("Grandma", [{ name: "Theo", slot: 2 }]),
+  droppedOutAlone: droppedOut("Grandma", []),
+  signOffHelp: signOffHelp([{ name: "Theo", slot: 2 }]),
+  signOffHelpEmpty: signOffHelp([]),
+  codePrompt: codePrompt([{ name: "Zoe", code: 4 }], true),
 };
 
 describe("system texts", () => {

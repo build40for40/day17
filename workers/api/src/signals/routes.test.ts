@@ -8,9 +8,9 @@ import { MAX_BROADCASTS_PER_DAY } from "../limits";
 import type { Handler } from "../http";
 import { createSessionCookie } from "../session";
 import { clearFakeOutbox, fakeOutbox } from "../sms/fake";
-import { allClear } from "../sms/texts";
+import { allClear, signalWithCodes, standDown, updateWithCodes, youAreOn } from "../sms/texts";
 import { anastasia, grandma, insertSignal, seedHousehold, signalsOf, stranger, theo } from "./fixtures";
-import { handleCreateSignal, handleInboundSms, handleScheduled, handleSolveSignal } from "./routes";
+import { handleCreateSignal, handleInboundSms, handleScheduled, handleSignOff, handleSolveSignal } from "./routes";
 
 async function cookieFor(personId: string): Promise<string> {
   return (await createSessionCookie(env, personId)).split(";")[0]!;
@@ -60,11 +60,11 @@ describe("signal routes", () => {
 
       expect(response.status).toBe(201);
       expect(await response.json()).toEqual({
-        signal: { id: expect.any(String), householdId: "h1", text: "Hospital run, need a lift", source: "web", status: "open", openedAt: expect.any(String), solvedAt: null },
+        signal: { id: expect.any(String), householdId: "h1", text: "Hospital run, need a lift", source: "web", status: "open", openedAt: expect.any(String), solvedAt: null, signedOffPersonId: null },
       });
       expect(sent()).toEqual([
-        { to: grandma.phone, body: "Anastasia: Hospital run, need a lift" },
-        { to: theo.phone, body: "Anastasia: Hospital run, need a lift" },
+        { to: grandma.phone, body: signalWithCodes("Anastasia", "Hospital run, need a lift", 1) },
+        { to: theo.phone, body: signalWithCodes("Anastasia", "Hospital run, need a lift", 1) },
       ]);
     });
 
@@ -76,8 +76,8 @@ describe("signal routes", () => {
       expect(response.status).toBe(200);
       expect(await response.json()).toMatchObject({ signal: { text: "Pickup at 5", status: "open" } });
       expect(sent()).toEqual([
-        { to: grandma.phone, body: "Anastasia: Make it 5:30" },
-        { to: theo.phone, body: "Anastasia: Make it 5:30" },
+        { to: grandma.phone, body: updateWithCodes("Anastasia", "Make it 5:30", 1) },
+        { to: theo.phone, body: updateWithCodes("Anastasia", "Make it 5:30", 1) },
       ]);
     });
 
@@ -139,6 +139,41 @@ describe("signal routes", () => {
 
     it("needs a session", async () => {
       expect((await call(handleSolveSignal, "/signals/solve")).status).toBe(401);
+    });
+  });
+
+  describe("POST /signals/sign-off", () => {
+    const reply = (from: string, body: string) => call(handleInboundSms, "/sms/inbound", { body: JSON.stringify({ from, body }) });
+
+    it("confirms a helper who offered and keeps the signal open", async () => {
+      await asParent(handleCreateSignal, "/signals", { text: "Pickup at 5" });
+      await reply(grandma.phone, "Y1");
+      clearFakeOutbox();
+
+      const response = await asParent(handleSignOff, "/signals/sign-off", { personId: grandma.id });
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ signal: { status: "open", signedOffPersonId: grandma.id } });
+      expect(sent()).toEqual([
+        { to: grandma.phone, body: youAreOn("Anastasia", 1) },
+        { to: theo.phone, body: standDown("Anastasia", "Grandma") },
+      ]);
+    });
+
+    it("refuses a helper who hasn't offered", async () => {
+      await asParent(handleCreateSignal, "/signals", { text: "Pickup at 5" });
+
+      const response = await asParent(handleSignOff, "/signals/sign-off", { personId: theo.id });
+
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({ error: "not_accepted" });
+    });
+
+    it("says when nothing is open", async () => {
+      const response = await asParent(handleSignOff, "/signals/sign-off", { personId: grandma.id });
+
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({ error: "no_open_signal" });
     });
   });
 

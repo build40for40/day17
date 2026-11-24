@@ -24,8 +24,8 @@ describe("helpers", () => {
 
   it("maps a signal row", () => {
     expect(
-      toSignal({ id: "s1", household_id: "h1", text: "Pickup at 5", source: "sms", status: "open", opened_at: "2026-11-24T09:00:00.000Z", solved_at: null }),
-    ).toEqual({ id: "s1", householdId: "h1", text: "Pickup at 5", source: "sms", status: "open", openedAt: "2026-11-24T09:00:00.000Z", solvedAt: null });
+      toSignal({ id: "s1", household_id: "h1", text: "Pickup at 5", source: "sms", status: "open", opened_at: "2026-11-24T09:00:00.000Z", solved_at: null, signed_off_person_id: null }),
+    ).toEqual({ id: "s1", householdId: "h1", text: "Pickup at 5", source: "sms", status: "open", openedAt: "2026-11-24T09:00:00.000Z", solvedAt: null, signedOffPersonId: null });
   });
 });
 

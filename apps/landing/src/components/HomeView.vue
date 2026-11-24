@@ -38,6 +38,7 @@ async function remove() {
 
     <SignalPanel
       :open-signal="props.me.openSignal"
+      :recipients="props.me.recipients"
       @changed="emit('signal', $event)"
       @expired="emit('expired')"
     />

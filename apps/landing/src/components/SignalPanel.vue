@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { MAX_SIGNAL_LENGTH, type Signal } from 'contract'
+import { MAX_SIGNAL_LENGTH, type RecipientState, type Signal, type SignalRecipient } from 'contract'
 
-import { sendSignal, solveSignal } from '../api'
+import { sendSignal, signOff, solveSignal } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
 
-defineProps<{ openSignal: Signal | null }>()
+const props = defineProps<{ openSignal: Signal | null; recipients: SignalRecipient[] }>()
 const emit = defineEmits<{ changed: [signal: Signal | null]; expired: [] }>()
 
 const composing = ref(false)
@@ -14,6 +14,15 @@ const error = ref('')
 const busy = ref(false)
 
 const remaining = computed(() => MAX_SIGNAL_LENGTH - text.value.length)
+
+const STATE_LABELS: Record<RecipientState, string> = {
+  not_read: 'No reply yet',
+  pending: 'Checking',
+  accepted: 'Can help',
+  rejected: "Can't this time",
+}
+const labelFor = (recipient: SignalRecipient) => (recipient.signedOff ? 'On it' : STATE_LABELS[recipient.state])
+const onIt = computed(() => props.recipients.find((recipient) => recipient.signedOff))
 
 async function run(action: () => Promise<Signal | null>) {
   busy.value = true
@@ -39,6 +48,8 @@ function send() {
   return run(async () => (await sendSignal(body)).signal)
 }
 
+const confirm = (personId: string) => run(async () => (await signOff(personId)).signal)
+
 const solve = () =>
   run(async () => {
     await solveSignal()
@@ -49,8 +60,24 @@ const solve = () =>
 <template>
   <section class="card signal" :class="{ live: openSignal }">
     <template v-if="openSignal">
-      <p class="eyebrow">Signal is up</p>
+      <p class="eyebrow" data-test="stage">{{ onIt ? `${onIt.name} is on it` : 'Signal is up' }}</p>
       <p class="ask" data-test="open-text">{{ openSignal.text }}</p>
+      <ul v-if="recipients.length" class="replies">
+        <li v-for="recipient in recipients" :key="recipient.personId" :class="recipient.signedOff ? 'on-it' : recipient.state" data-test="recipient">
+          <span>{{ recipient.name }}</span>
+          <span class="state">{{ labelFor(recipient) }}</span>
+          <button
+            v-if="recipient.state === 'accepted' && !recipient.signedOff"
+            class="link"
+            type="button"
+            :disabled="busy"
+            data-test="confirm"
+            @click="confirm(recipient.personId)"
+          >
+            {{ onIt ? 'Switch to them' : 'Confirm' }}
+          </button>
+        </li>
+      </ul>
       <button class="solved" type="button" :disabled="busy" data-test="solve" @click="solve">Solved</button>
     </template>
 

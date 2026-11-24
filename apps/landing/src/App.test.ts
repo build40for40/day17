@@ -10,6 +10,7 @@ const me = (household: MeResponse['household']): MeResponse => ({
   person: { id: 'p1', phone: '+447700900001', name: 'Sam' },
   household,
   openSignal: null,
+  recipients: [],
   signalNumber: null,
 })
 

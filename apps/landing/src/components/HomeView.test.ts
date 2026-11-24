@@ -15,6 +15,7 @@ const me = (signalNumber: string | null): MeResponse => ({
     helpers: [{ id: 'p2', name: 'Nan', phone: '+447700900111', optedOut: false }],
   },
   openSignal: null,
+  recipients: [],
   signalNumber,
 })
 

@@ -18,6 +18,7 @@ export type ErrorCode =
   | "signal_too_long"
   | "too_many_signals"
   | "no_open_signal"
+  | "not_accepted"
   | "not_found"
   | "method_not_allowed"
   | "not_implemented"
@@ -28,6 +29,7 @@ export type OkResponse = { ok: true };
 
 export type SignalStatus = "open" | "solved";
 export type SignalSource = "sms" | "web";
+export type RecipientState = "not_read" | "pending" | "accepted" | "rejected";
 export type MembershipRole = "owner" | "helper";
 
 export type Person = {
@@ -58,6 +60,14 @@ export type Signal = {
   status: SignalStatus;
   openedAt: string;
   solvedAt: string | null;
+  signedOffPersonId: string | null;
+};
+
+export type SignalRecipient = {
+  personId: string;
+  name: string;
+  state: RecipientState;
+  signedOff: boolean;
 };
 
 export type VerifyStartRequest = { phone: string; turnstileToken?: string };
@@ -70,6 +80,7 @@ export type MeResponse = {
   person: Person;
   household: Household | null;
   openSignal: Signal | null;
+  recipients: SignalRecipient[];
   signalNumber: string | null;
 };
 
@@ -86,3 +97,6 @@ export type CreateSignalRequest = { text: string };
 export type CreateSignalResponse = { signal: Signal };
 
 export type SolveSignalResponse = { signal: Signal };
+
+export type SignOffRequest = { personId: string };
+export type SignOffResponse = { signal: Signal };

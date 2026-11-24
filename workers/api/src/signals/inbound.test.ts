@@ -6,13 +6,35 @@ import { clearDatabase } from "../../test/db";
 import { isoAgo, type MessageRow, type PersonRow, type SignalRow } from "../db";
 import { clearFakeOutbox, FAKE_FAILING_NUMBER, fakeOutbox } from "../sms/fake";
 import { sendAll } from "../sms/send";
-import { allClear, nothingOpen, signalTooLong, signupLink, tooManySignals, tooManyTexts } from "../sms/texts";
+import {
+  acceptReceived,
+  allClear,
+  checkingReceived,
+  codePrompt,
+  droppedOut,
+  helperAccepted,
+  helperChecking,
+  helperRejected,
+  nothingOpen,
+  rejectReceived,
+  signalTooLong,
+  signalWithCodes,
+  signOffHelp,
+  signupLink,
+  standby,
+  standDown,
+  stillNeeded,
+  tooManySignals,
+  tooManyTexts,
+  updateWithCodes,
+  youAreOn,
+} from "../sms/texts";
 import { anastasia, camille, grandma, insertSignal, outboundMessages, seedHousehold, signalsOf, stranger, theo } from "./fixtures";
 import { decideRoute, routeInbound, type SenderContext } from "./inbound";
 
 const person: PersonRow = { id: "p1", phone: "+447700900200", name: "Sam", opted_out_at: null, created_at: "" };
 const household = { id: "h1", name: "The Martins", created_at: "" };
-const signal: SignalRow = { id: "s1", household_id: "h1", text: "Pickup", source: "sms", status: "open", opened_at: "", solved_at: null };
+const signal: SignalRow = { id: "s1", household_id: "h1", text: "Pickup", source: "sms", status: "open", opened_at: "", solved_at: null, signed_off_person_id: null };
 
 const unknown: SenderContext = {
   person: null,
@@ -22,6 +44,8 @@ const unknown: SenderContext = {
   helperName: null,
   helpedHouseholdId: null,
   signupLinkSent: false,
+  alerts: [],
+  promptedRecently: false,
 };
 const parent: SenderContext = { ...unknown, person, owned: { person, household } };
 const helper: SenderContext = { ...unknown, person, helpedHouseholdId: "h2" };
@@ -76,8 +100,8 @@ describe("routeInbound", () => {
     expect(outcome).toEqual({ action: "opened", signalId: opened?.id });
     expect(opened).toMatchObject({ text: "Can anyone grab Leo at 5?", source: "sms", status: "open" });
     expect(sent()).toEqual([
-      { to: grandma.phone, body: "Anastasia: Can anyone grab Leo at 5?" },
-      { to: theo.phone, body: "Anastasia: Can anyone grab Leo at 5?" },
+      { to: grandma.phone, body: signalWithCodes("Anastasia", "Can anyone grab Leo at 5?", 1) },
+      { to: theo.phone, body: signalWithCodes("Anastasia", "Can anyone grab Leo at 5?", 1) },
     ]);
 
     const inbound = await env.DB.prepare("SELECT * FROM messages WHERE direction = 'in'").first<MessageRow>();
@@ -96,8 +120,8 @@ describe("routeInbound", () => {
     expect(outcome).toMatchObject({ action: "updated" });
     expect(await signalsOf("h1")).toHaveLength(1);
     expect(sent()).toEqual([
-      { to: grandma.phone, body: "Anastasia: Actually 5:30" },
-      { to: theo.phone, body: "Anastasia: Actually 5:30" },
+      { to: grandma.phone, body: updateWithCodes("Anastasia", "Actually 5:30", 1) },
+      { to: theo.phone, body: updateWithCodes("Anastasia", "Actually 5:30", 1) },
     ]);
   });
 
@@ -131,12 +155,183 @@ describe("routeInbound", () => {
     expect(sent()).toEqual([{ to: zoe.phone, body: "Mamie: Which one?" }]);
   });
 
-  it("opens the parent's own signal even while a household they help has one open", async () => {
-    await seedHousehold("h2", "The Duponts", { id: "p-zoe", phone: "+447700900104", name: "Zoe" }, [anastasia]);
-    await insertSignal("h2", isoAgo(1_000));
+  describe("reply codes and states", () => {
+    const zoe = { id: "p-zoe", phone: "+447700900104", name: "Zoe" };
 
-    expect(await text(anastasia.phone, "Need someone to grab Leo at 5")).toMatchObject({ action: "opened" });
-    expect(sent().map(({ to }) => to)).toEqual([grandma.phone, theo.phone]);
+    const stateOf = async (personId: string) =>
+      (await env.DB.prepare("SELECT state FROM signal_recipients WHERE person_id = ? ORDER BY code").bind(personId).all<{ state: string }>()).results.map(
+        ({ state }) => state,
+      );
+    const signedOff = async (householdId: string) =>
+      (await env.DB.prepare("SELECT signed_off_person_id AS id FROM signals WHERE household_id = ? AND status = 'open'").bind(householdId).first<{ id: string | null }>())
+        ?.id;
+
+    async function raise(from = anastasia.phone, body = "Pickup at 5") {
+      await text(from, body);
+      clearFakeOutbox();
+    }
+
+    it("starts every helper as not read", async () => {
+      await raise();
+      expect(await stateOf(grandma.id)).toEqual(["not_read"]);
+      expect(await stateOf(theo.id)).toEqual(["not_read"]);
+      expect(await stateOf(camille.id)).toEqual([]);
+    });
+
+    it("moves a helper through checking, accept and reject, telling the parent each time", async () => {
+      await raise();
+
+      expect(await text(grandma.phone, "C1 let me ask Grandpa")).toMatchObject({ action: "replied", state: "pending" });
+      expect(sent()).toEqual([
+        { to: grandma.phone, body: checkingReceived("Anastasia", 1) },
+        { to: anastasia.phone, body: helperChecking("Grandma", "let me ask Grandpa") },
+      ]);
+
+      clearFakeOutbox();
+      expect(await text(grandma.phone, "y1")).toMatchObject({ action: "replied", state: "accepted" });
+      expect(sent()).toEqual([
+        { to: grandma.phone, body: acceptReceived("Anastasia") },
+        { to: anastasia.phone, body: helperAccepted("Grandma", 1) },
+      ]);
+
+      clearFakeOutbox();
+      expect(await text(theo.phone, "Non")).toMatchObject({ action: "replied", state: "rejected" });
+      expect(sent()).toEqual([
+        { to: theo.phone, body: rejectReceived("Anastasia") },
+        { to: anastasia.phone, body: helperRejected("Theo") },
+      ]);
+      expect(await signalsOf("h1")).toHaveLength(1);
+    });
+
+    it("says nothing twice for the same answer", async () => {
+      await raise();
+      await text(grandma.phone, "Y1");
+      clearFakeOutbox();
+
+      await text(grandma.phone, "Y1");
+
+      expect(sent()).toEqual([]);
+    });
+
+    it("signs off the only offer on a bare OK and stands the others down", async () => {
+      await raise();
+      await text(grandma.phone, "Y1");
+      clearFakeOutbox();
+
+      expect(await text(anastasia.phone, "OK")).toMatchObject({ action: "signed_off" });
+
+      expect(sent()).toEqual([
+        { to: grandma.phone, body: youAreOn("Anastasia", 1) },
+        { to: theo.phone, body: standDown("Anastasia", "Grandma") },
+      ]);
+      expect(await signedOff("h1")).toBe(grandma.id);
+      expect((await signalsOf("h1"))[0]?.status).toBe("open");
+    });
+
+    it("asks which offer when OK is ambiguous, then keeps the other one warm", async () => {
+      await raise();
+      await text(grandma.phone, "Y1");
+      await text(theo.phone, "Y1");
+      clearFakeOutbox();
+
+      expect(await text(anastasia.phone, "OK")).toEqual({ action: "sign_off_refused" });
+      expect(sent()).toEqual([
+        {
+          to: anastasia.phone,
+          body: signOffHelp([
+            { name: "Grandma", slot: 1 },
+            { name: "Theo", slot: 2 },
+          ]),
+        },
+      ]);
+
+      clearFakeOutbox();
+      await text(anastasia.phone, "OK 2");
+      expect(sent()).toEqual([
+        { to: grandma.phone, body: standby("Anastasia", "Theo") },
+        { to: theo.phone, body: youAreOn("Anastasia", 1) },
+      ]);
+      expect(await stateOf(grandma.id)).toEqual(["accepted"]);
+    });
+
+    it("goes back to alert when the signed off helper drops out", async () => {
+      await seedHousehold("h3", "Spare", zoe, []);
+      await env.DB.prepare("INSERT INTO memberships (household_id, person_id, role, name) VALUES ('h1', ?, 'helper', 'Zoe')").bind(zoe.id).run();
+      await raise();
+      await text(grandma.phone, "Y1");
+      await text(theo.phone, "Y1");
+      await text(anastasia.phone, "OK 1");
+      clearFakeOutbox();
+
+      expect(await text(grandma.phone, "N1 car won't start")).toMatchObject({ action: "replied", state: "rejected" });
+
+      expect(await signedOff("h1")).toBeNull();
+      expect(sent()).toEqual([
+        { to: grandma.phone, body: rejectReceived("Anastasia") },
+        { to: anastasia.phone, body: droppedOut("Grandma", [{ name: "Theo", slot: 2 }]) },
+        { to: zoe.phone, body: stillNeeded("Anastasia", "Pickup at 5", 1) },
+        { to: anastasia.phone, body: "Grandma: car won't start" },
+      ]);
+    });
+
+    it("asks a parent which signal they mean before opening their own, and opens it when they send again", async () => {
+      await seedHousehold("h2", "The Duponts", zoe, [anastasia]);
+      await raise(zoe.phone, "Hospital, need a lift");
+
+      expect(await text(anastasia.phone, "On my way")).toEqual({ action: "code_prompt" });
+      expect(sent()).toEqual([{ to: anastasia.phone, body: codePrompt([{ name: "Zoe", code: 1 }], true) }]);
+      expect(await signalsOf("h1")).toHaveLength(0);
+
+      clearFakeOutbox();
+      expect(await text(anastasia.phone, "Need someone to grab Leo at 5")).toMatchObject({ action: "opened" });
+      expect(sent().map(({ to }) => to)).toEqual([grandma.phone, theo.phone]);
+    });
+
+    it("sends a parent's coded reply to the household they help, not their own", async () => {
+      await seedHousehold("h2", "The Duponts", zoe, [anastasia]);
+      await raise(zoe.phone, "Hospital, need a lift");
+
+      expect(await text(anastasia.phone, "Y1 on my way")).toMatchObject({ action: "replied", state: "accepted" });
+
+      expect(sent()).toEqual([
+        { to: anastasia.phone, body: acceptReceived("Zoe") },
+        { to: zoe.phone, body: helperAccepted("Anastasia", 1, "on my way") },
+      ]);
+      expect(await signalsOf("h1")).toHaveLength(0);
+
+      clearFakeOutbox();
+      expect(await text(anastasia.phone, "Pickup at 5")).toMatchObject({ action: "opened" });
+    });
+
+    it("gives a helper in two live signals a different code for each", async () => {
+      await seedHousehold("h2", "The Duponts", zoe, [{ ...grandma, name: "Mamie" }]);
+      await raise();
+      await text(zoe.phone, "Hospital, need a lift");
+      expect(sent()).toEqual([{ to: grandma.phone, body: signalWithCodes("Zoe", "Hospital, need a lift", 2) }]);
+
+      clearFakeOutbox();
+      expect(await text(grandma.phone, "Yes")).toEqual({ action: "code_prompt" });
+      expect(sent()).toEqual([
+        {
+          to: grandma.phone,
+          body: codePrompt(
+            [
+              { name: "Zoe", code: 2 },
+              { name: "Anastasia", code: 1 },
+            ],
+            false,
+          ),
+        },
+      ]);
+
+      clearFakeOutbox();
+      await text(grandma.phone, "Y2");
+      expect(sent()).toEqual([
+        { to: grandma.phone, body: acceptReceived("Zoe") },
+        { to: zoe.phone, body: helperAccepted("Mamie", 1) },
+      ]);
+      expect(await stateOf(grandma.id)).toEqual(["not_read", "accepted"]);
+    });
   });
 
   it("tells a helper when nothing is open, once an hour at most", async () => {
@@ -177,7 +372,7 @@ describe("routeInbound", () => {
     expect(row?.opted_out_at).not.toBeNull();
 
     await text(anastasia.phone, "Pickup at 5");
-    expect(sent()).toEqual([{ to: theo.phone, body: "Anastasia: Pickup at 5" }]);
+    expect(sent()).toEqual([{ to: theo.phone, body: signalWithCodes("Anastasia", "Pickup at 5", 1) }]);
 
     clearFakeOutbox();
     await text(anastasia.phone, "SOLVED");

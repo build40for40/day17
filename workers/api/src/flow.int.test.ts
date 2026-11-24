@@ -6,7 +6,7 @@ import { clearDatabase } from "../test/db";
 import worker from "./index";
 import { SESSION_COOKIE } from "./session";
 import { clearFakeOutbox, fakeOutbox } from "./sms/fake";
-import { allClear, welcome } from "./sms/texts";
+import { allClear, signalWithCodes, updateWithCodes, welcome } from "./sms/texts";
 
 const PARENT = "+447700900300";
 const GRAN = "+447700900301";
@@ -80,7 +80,7 @@ describe("the bat signal, end to end with the fake provider", () => {
 
   it("runs a signal over SMS: broadcast, relay, STOP, update and solve", async () => {
     expect((await text(PARENT, "Can anyone grab Leo from school at 5?")).status).toBe(200);
-    expect(drain()).toEqual(to([GRAN, THEO, CAMILLE], "Anastasia: Can anyone grab Leo from school at 5?"));
+    expect(drain()).toEqual(to([GRAN, THEO, CAMILLE], signalWithCodes("Anastasia", "Can anyone grab Leo from school at 5?", 1)));
     const me = (await (await call("GET", "/me")).json()) as MeResponse;
     expect(me.openSignal).toMatchObject({ text: "Can anyone grab Leo from school at 5?", source: "sms", status: "open" });
 
@@ -91,7 +91,7 @@ describe("the bat signal, end to end with the fake provider", () => {
     expect(drain()).toEqual([]);
 
     await text(PARENT, "Gran has it, thanks all");
-    expect(drain()).toEqual(to([GRAN, CAMILLE], "Anastasia: Gran has it, thanks all"));
+    expect(drain()).toEqual(to([GRAN, CAMILLE], updateWithCodes("Anastasia", "Gran has it, thanks all", 1)));
 
     await text(PARENT, " Résolu ");
     expect(drain()).toEqual(to([GRAN, CAMILLE], allClear("Anastasia")));
@@ -103,12 +103,12 @@ describe("the bat signal, end to end with the fake provider", () => {
     expect(opened.status).toBe(201);
     const { signal } = (await opened.json()) as { signal: Signal };
     expect(signal).toMatchObject({ source: "web", status: "open" });
-    expect(drain()).toEqual(to([GRAN, CAMILLE], "Anastasia: No nappies left, anyone near Tesco?"));
+    expect(drain()).toEqual(to([GRAN, CAMILLE], signalWithCodes("Anastasia", "No nappies left, anyone near Tesco?", 1)));
 
     const updated = await call("POST", "/signals", { text: "Size 4 please" });
     expect(updated.status).toBe(200);
     expect(((await updated.json()) as { signal: Signal }).signal.id).toBe(signal.id);
-    expect(drain()).toEqual(to([GRAN, CAMILLE], "Anastasia: Size 4 please"));
+    expect(drain()).toEqual(to([GRAN, CAMILLE], updateWithCodes("Anastasia", "Size 4 please", 1)));
 
     await text(CAMILLE, "Grabbing some now");
     expect(drain()).toEqual([{ to: PARENT, body: "Camille: Grabbing some now" }]);

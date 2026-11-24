@@ -4,7 +4,7 @@ import { MAX_BROADCASTS_PER_DAY } from "../limits";
 import { beforeEach, describe, expect, it } from "vitest";
 import { clearDatabase } from "../../test/db";
 import { isoAgo } from "../db";
-import { allClear } from "../sms/texts";
+import { allClear, signalWithCodes, updateWithCodes } from "../sms/texts";
 import { anastasia, camille, grandma, insertSignal, seedHousehold, signalsOf, theo } from "./fixtures";
 import { closeStaleSignals, findOwner, raiseSignal, solveSignal, type Owner } from "./signals";
 
@@ -41,8 +41,8 @@ describe("signals", () => {
       expect(result).toMatchObject({ ok: true, action: "opened", signal: { text: "Can anyone grab Leo at 5?", source: "web", status: "open" } });
       if (!result.ok) return;
       expect(result.deliveries).toEqual([
-        { to: grandma.phone, body: "Anastasia: Can anyone grab Leo at 5?", kind: "signal", householdId: "h1", signalId: result.signal.id, personId: grandma.id },
-        { to: theo.phone, body: "Anastasia: Can anyone grab Leo at 5?", kind: "signal", householdId: "h1", signalId: result.signal.id, personId: theo.id },
+        { to: grandma.phone, body: signalWithCodes("Anastasia", "Can anyone grab Leo at 5?", 1), kind: "signal", householdId: "h1", signalId: result.signal.id, personId: grandma.id },
+        { to: theo.phone, body: signalWithCodes("Anastasia", "Can anyone grab Leo at 5?", 1), kind: "signal", householdId: "h1", signalId: result.signal.id, personId: theo.id },
       ]);
     });
 
@@ -59,8 +59,8 @@ describe("signals", () => {
       if (!first.ok || !second.ok) return;
       expect(second.signal.id).toBe(first.signal.id);
       expect(second.deliveries.map(({ kind, body }) => ({ kind, body }))).toEqual([
-        { kind: "update", body: "Anastasia: Found a car, never mind the bus" },
-        { kind: "update", body: "Anastasia: Found a car, never mind the bus" },
+        { kind: "update", body: updateWithCodes("Anastasia", "Found a car, never mind the bus", 1) },
+        { kind: "update", body: updateWithCodes("Anastasia", "Found a car, never mind the bus", 1) },
       ]);
       expect(await signalsOf("h1")).toHaveLength(1);
     });
@@ -69,7 +69,10 @@ describe("signals", () => {
       let rivalId: string | null = null;
       const racingDb = new Proxy(env.DB, {
         get(target, key) {
-          if (key !== "prepare") return Reflect.get(target, key, target);
+          if (key !== "prepare") {
+            const value = Reflect.get(target, key, target);
+            return typeof value === "function" ? value.bind(target) : value;
+          }
           return (sql: string) => {
             const statement = target.prepare(sql);
             if (!sql.startsWith("INSERT INTO signals")) return statement;
@@ -94,7 +97,7 @@ describe("signals", () => {
 
     it("uses the household name when the parent has none", async () => {
       const result = await raiseSignal(env, { ...owner, person: { ...owner.person, name: null } }, "Pickup at 5", "web");
-      expect(result.ok && result.deliveries[0]?.body).toBe("The Martins: Pickup at 5");
+      expect(result.ok && result.deliveries[0]?.body).toBe(signalWithCodes("The Martins", "Pickup at 5", 1));
     });
 
     it("refuses an empty text", async () => {

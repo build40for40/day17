@@ -57,6 +57,7 @@ describe("GET /me", () => {
       person: { id: "parent", phone: PARENT, name: null },
       household: null,
       openSignal: null,
+      recipients: [],
       signalNumber: null,
     });
   });

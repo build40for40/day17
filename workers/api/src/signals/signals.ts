@@ -2,7 +2,8 @@ import { MAX_SIGNAL_LENGTH, MAX_SIGNALS_PER_DAY, SIGNAL_AUTO_CLOSE_MS, SIGNAL_WI
 import { isoAgo, newId, now, type HouseholdRow, type PersonRow, type SignalRow } from "../db";
 import { limits, take } from "../limits";
 import type { Delivery } from "../sms/send";
-import { allClear, relay } from "../sms/texts";
+import { allClear, signalWithCodes, updateWithCodes } from "../sms/texts";
+import { createRecipients, listRecipients } from "./recipients";
 
 export type Owner = { person: PersonRow; household: HouseholdRow };
 
@@ -61,7 +62,13 @@ export async function raiseSignal(env: Env, owner: Owner, rawText: string, sourc
   }
   if (!signal) throw new Error("Inserting a signal returned no row");
 
-  return { ok: true, action: "opened", signal, deliveries: await broadcast(env, owner, signal, "signal", relay(senderName(owner), text)) };
+  await createRecipients(env, signal, await activeHelpers(env, owner.household.id));
+  return {
+    ok: true,
+    action: "opened",
+    signal,
+    deliveries: await broadcast(env, signal, "signal", (code) => signalWithCodes(senderName(owner), text, code)),
+  };
 }
 
 export async function solveSignal(env: Env, owner: Owner): Promise<SolveResult> {
@@ -71,7 +78,7 @@ export async function solveSignal(env: Env, owner: Owner): Promise<SolveResult> 
     .bind(now(), owner.household.id)
     .first<SignalRow>();
   if (!signal) return { ok: false, error: "no_open_signal" };
-  return { ok: true, signal, deliveries: await broadcast(env, owner, signal, "all_clear", allClear(senderName(owner))) };
+  return { ok: true, signal, deliveries: await broadcast(env, signal, "all_clear", () => allClear(senderName(owner))) };
 }
 
 export async function closeStaleSignals(env: Env): Promise<number> {
@@ -86,19 +93,42 @@ export function senderName(owner: Owner): string {
 }
 
 async function update(env: Env, owner: Owner, signal: SignalRow, text: string): Promise<RaiseResult> {
-  return { ok: true, action: "updated", signal, deliveries: await broadcast(env, owner, signal, "update", relay(senderName(owner), text)) };
+  return {
+    ok: true,
+    action: "updated",
+    signal,
+    deliveries: await broadcast(env, signal, "update", (code) => updateWithCodes(senderName(owner), text, code)),
+  };
 }
 
-async function broadcast(env: Env, owner: Owner, signal: SignalRow, kind: Delivery["kind"], body: string): Promise<Delivery[]> {
+async function activeHelpers(env: Env, householdId: string): Promise<PersonRow[]> {
   const { results } = await env.DB.prepare(
     `SELECT p.* FROM people p
      JOIN memberships m ON m.person_id = p.id
      WHERE m.household_id = ? AND m.role = 'helper' AND p.opted_out_at IS NULL
      ORDER BY m.created_at, p.phone`,
   )
-    .bind(owner.household.id)
+    .bind(householdId)
     .all<PersonRow>();
-  return results.map((helper) => ({ to: helper.phone, body, kind, householdId: owner.household.id, signalId: signal.id, personId: helper.id }));
+  return results;
+}
+
+async function broadcast(env: Env, signal: SignalRow, kind: Delivery["kind"], body: (code: number) => string): Promise<Delivery[]> {
+  let recipients = await listRecipients(env, signal.id);
+  if (recipients.length === 0) {
+    await createRecipients(env, signal, await activeHelpers(env, signal.household_id));
+    recipients = await listRecipients(env, signal.id);
+  }
+  return recipients
+    .filter((recipient) => !recipient.opted_out_at)
+    .map((recipient) => ({
+      to: recipient.phone,
+      body: body(recipient.code),
+      kind,
+      householdId: signal.household_id,
+      signalId: signal.id,
+      personId: recipient.person_id,
+    }));
 }
 
 function isUniqueViolation(cause: unknown): boolean {
