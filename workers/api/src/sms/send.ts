@@ -1,5 +1,5 @@
 import { newId, type MessageKind, type MessageStatus } from "../db";
-import { getProvider } from "./provider";
+import { getProvider, type SendResult, type SmsProvider } from "./provider";
 
 export type Delivery = {
   to: string;
@@ -12,9 +12,23 @@ export type Delivery = {
 
 export type DeliveryOutcome = { to: string; status: Extract<MessageStatus, "sent" | "failed"> };
 
-export async function sendAll(env: Env, deliveries: Delivery[]): Promise<DeliveryOutcome[]> {
-  const provider = getProvider(env);
-  const results = await Promise.allSettled(deliveries.map((delivery) => provider.send({ to: delivery.to, body: delivery.body })));
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function sendInTurn(provider: SmsProvider, deliveries: Delivery[]): Promise<PromiseSettledResult<SendResult>[]> {
+  const results: PromiseSettledResult<SendResult>[] = [];
+  for (const [index, delivery] of deliveries.entries()) {
+    if (index > 0 && provider.gapMs) await pause(provider.gapMs);
+    try {
+      results.push({ status: "fulfilled", value: await provider.send({ to: delivery.to, body: delivery.body }) });
+    } catch (reason) {
+      results.push({ status: "rejected", reason });
+    }
+  }
+  return results;
+}
+
+export async function sendAll(env: Env, deliveries: Delivery[], provider: SmsProvider = getProvider(env)): Promise<DeliveryOutcome[]> {
+  const results = await sendInTurn(provider, deliveries);
 
   const outcomes = deliveries.map((delivery, index): DeliveryOutcome & { providerId: string | null } => {
     const result = results[index]!;

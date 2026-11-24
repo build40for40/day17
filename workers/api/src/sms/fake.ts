@@ -16,6 +16,8 @@ export function clearFakeOutbox(): void {
 
 export function createFakeProvider(): SmsProvider {
   return {
+    receives: true,
+
     async send({ to, body }) {
       if (to === FAKE_FAILING_NUMBER) throw new Error(`Fake SMS to ${to} failed`);
       console.log(`[fake sms] to ${to}: ${body}`);

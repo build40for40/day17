@@ -98,6 +98,12 @@ describe("signals", () => {
       expect(await signalsOf("h1")).toHaveLength(1);
     });
 
+    it("leaves the reply codes off when the provider can't receive texts", async () => {
+      const result = await raiseSignal({ ...env, SMS_PROVIDER: "textbelt", TEXTBELT_KEY: "test" }, owner, "Pickup at 5", "web");
+
+      expect(result.ok && result.deliveries.map(({ body }) => body)).toEqual(["Anastasia: Pickup at 5", "Anastasia: Pickup at 5"]);
+    });
+
     it("uses the household name when the parent has none", async () => {
       const result = await raiseSignal(env, { ...owner, person: { ...owner.person, name: null } }, "Pickup at 5", "web");
       expect(result.ok && result.deliveries[0]?.body).toBe(signalWithCodes("The Martins", "Pickup at 5", 1));

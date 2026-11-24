@@ -2,7 +2,8 @@ import { MAX_SIGNAL_LENGTH, MAX_SIGNALS_PER_DAY, SIGNAL_AUTO_CLOSE_MS, SIGNAL_WI
 import { isoAgo, newId, now, type HouseholdRow, type PersonRow, type SignalRow } from "../db";
 import { limits, take } from "../limits";
 import type { Delivery } from "../sms/send";
-import { allClear, signalWithCodes, updateWithCodes } from "../sms/texts";
+import { getProvider } from "../sms/provider";
+import { allClear, relay, signalWithCodes, updateWithCodes } from "../sms/texts";
 import { createRecipients, listRecipients } from "./recipients";
 
 export type Owner = { person: PersonRow; household: HouseholdRow };
@@ -68,7 +69,9 @@ export async function raiseSignal(env: Env, owner: Owner, rawText: string, sourc
     ok: true,
     action: "opened",
     signal,
-    deliveries: await broadcast(env, signal, "signal", (code) => signalWithCodes(senderName(owner), text, code)),
+    deliveries: await broadcast(env, signal, "signal", (code) =>
+      canReply(env) ? signalWithCodes(senderName(owner), text, code) : relay(senderName(owner), text),
+    ),
   };
 }
 
@@ -89,6 +92,10 @@ export async function closeStaleSignals(env: Env): Promise<number> {
   return meta.changes;
 }
 
+export function canReply(env: Env): boolean {
+  return getProvider(env).receives === true;
+}
+
 export function senderName(owner: Owner): string {
   return owner.person.name ?? owner.household.name;
 }
@@ -98,7 +105,9 @@ async function update(env: Env, owner: Owner, signal: SignalRow, text: string): 
     ok: true,
     action: "updated",
     signal,
-    deliveries: await broadcast(env, signal, "update", (code) => updateWithCodes(senderName(owner), text, code)),
+    deliveries: await broadcast(env, signal, "update", (code) =>
+      canReply(env) ? updateWithCodes(senderName(owner), text, code) : relay(senderName(owner), text),
+    ),
   };
 }
 

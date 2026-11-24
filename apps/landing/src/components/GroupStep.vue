@@ -63,7 +63,7 @@ async function submit() {
 <template>
   <form class="card" novalidate @submit.prevent="submit">
     <h2>{{ props.knownName ? 'A new group' : 'Step 3: your people' }}</h2>
-    <p>Who should get the signal? We'll text each of them once to say hello and tell them they can reply STOP.</p>
+    <p>Who should get the signal? We'll text each of them once to say hello. If someone wants out, they'll ask you.</p>
     <label v-if="!props.knownName">
       Your name
       <input v-model="parentName" autocomplete="name" :maxlength="MAX_NAME_LENGTH" data-test="parent-name" />

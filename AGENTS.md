@@ -39,6 +39,7 @@ One workflow, `.github/workflows/ci.yml`, built from the shared `build40for40/ac
 - **Tables:** `households`, `people` (one row per phone number), `memberships` (owner or helper, with the name that parent gave the helper), `signals` (at most one open per group, with the helper the parent signed off on), `signal_recipients` (one row per helper per signal: their reply code and their state), `messages` (every text in and out, deduped by `provider_id`), `verifications` (hashed sign-in codes) and `rate_events` (one row per rate limited action, keyed by phone or IP).
 - **Several groups:** a parent can own up to 5 groups (one per child, the football team), each with its own helpers and its own open signal. The page has a group switcher, and every signal endpoint takes a `householdId`. By text, a parent with several groups is told to pick on the page, unless exactly one of their groups has a signal open, which then gets the update.
 - **Reply codes:** every helper gets a code for each signal, unique among their open ones, and answers with `Y4` (can help), `C4` (checking) or `N4` (can't). A text with a code always goes to that signal, so a parent who also helps another household can't open their own signal by mistake. Free text from a parent with an unanswered alert gets a "which signal?" prompt first, and sending it again opens their own.
+- **Only where replies can arrive:** a provider says whether it can receive texts (`receives`). The fake can, Textbelt can't. With Textbelt the broadcast goes out without the reply code line and the page hides the helper states, so nobody is asked to reply to a number that can't hear them.
 - **States:** a helper is `not_read`, `pending`, `accepted` or `rejected`. A signal is in alert until the parent signs off on one accepted helper (`OK 2` by text, or Confirm on the page), which doesn't close it. Other accepted helpers stay warm as backup, and if the signed off helper sends `N`, the signal goes back to alert and everyone who hasn't answered is asked again. Only SOLVED or the 24 hour cron closes a signal.
 - **Names:** a helper's name lives on their membership, so each parent only ever sees the name they typed. `people.name` is the name a parent gave themselves.
 - **Deletion:** deleting a household removes its memberships, signals and messages, the people it leaves with no other household (the parent included), and signs the parent out. Someone who texted STOP keeps a nameless row with `opted_out_at` so they're never texted again, not even a sign-in code.
@@ -52,15 +53,15 @@ One workflow, `.github/workflows/ci.yml`, built from the shared `build40for40/ac
 - **`SMS_PROVIDER`:** `textbelt` in `wrangler.jsonc`, so a deploy sends real texts. `pnpm dev` and the tests override it to `fake`.
 - **`TEXTBELT_KEY`:** secret, required when the provider is `textbelt`. It's a GitHub secret that CI passes to the Worker.
 - **`ALLOW_FAKE_SMS`:** the fake provider only runs when this is `true`. `pnpm dev` passes it with `--var` and the tests bind it, but a deploy doesn't have it, so a deployed Worker can never fall back to the fake.
-- **`SIGNAL_NUMBER`:** the shared number parents text. Empty while the provider is Textbelt, which has no number to text, so `/me` returns null and the page says it's on its way.
+- **`SIGNAL_NUMBER`:** the shared number parents text. Empty while the provider is Textbelt, which has no number to text, so `/me` returns null and the page leaves the number out.
 
 ## Textbelt
 
 The deployed provider. [Textbelt](https://textbelt.com) sends one text per HTTP call from a shared pool of numbers, paid for in packs of texts.
 
-- **Outbound only.** It can't receive texts outside the US, so `/sms/inbound` always answers 403. Signals are sent, updated and solved from the web page, and a reply or a STOP from a helper never reaches the app.
+- **Outbound only.** It can't receive texts outside the US, so `/sms/inbound` always answers 403. Signals are sent, updated and solved from the web page, and a reply or a STOP from a helper never reaches the app. No text or page promises either: a helper who wants out asks the parent.
 - **No links** in a text until the key is whitelisted on Textbelt's site.
-- **About one text a second** is what Textbelt asks for, and `sendAll` sends a group's texts together, so a big group may see some fail.
+- **About one text a second** is what Textbelt asks for, so `sendAll` sends a group's texts one at a time with the provider's `gapMs` between them. A 10 helper group takes about 10 seconds to go out, inside the request.
 - **Every sign-in code is a paid text.**
 
 ## The fake SMS provider

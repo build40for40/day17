@@ -22,6 +22,7 @@ import { clearSessionCookie, requireSession } from "../session";
 import { sendAll } from "../sms/send";
 import { welcome } from "../sms/texts";
 import { listRecipients, toSignalRecipient } from "../signals/recipients";
+import { canReply } from "../signals/signals";
 
 type ValidHelper = { name: string; phone: string };
 type ValidRequest = { parentName: string; householdName: string; helpers: ValidHelper[] };
@@ -113,7 +114,7 @@ export const handleMe: Handler = async (request, env) => {
       return {
         household,
         openSignal: signalRow ? toSignal(signalRow) : null,
-        recipients: signalRow ? (await listRecipients(env, signalRow.id)).map((recipient) => toSignalRecipient(recipient, signalRow)) : [],
+        recipients: signalRow && canReply(env) ? (await listRecipients(env, signalRow.id)).map((recipient) => toSignalRecipient(recipient, signalRow)) : [],
       };
     }),
   );
