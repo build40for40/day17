@@ -1,0 +1,18 @@
+{
+  "name": "contract",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Request and response types, limits and phone helpers shared by the day17 API and landing page.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

@@ -1,26 +1,63 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import type { MeResponse } from 'contract'
 
 import App from './App.vue'
 
 afterEach(() => vi.unstubAllGlobals())
 
+const me = (household: MeResponse['household']): MeResponse => ({
+  person: { id: 'p1', phone: '+447700900001', name: 'Sam' },
+  household,
+  openSignal: null,
+  signalNumber: null,
+})
+
 describe('App', () => {
-  it('says the API is awake when it answers', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ message: 'The Worker says hi' })))
+  it('starts at the phone step when there is no session', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ error: 'unauthorized' }, { status: 401 })))
 
     const wrapper = mount(App)
     await flushPromises()
 
-    expect(wrapper.get('[data-test="api"]').text()).toBe('The API is awake.')
+    expect(wrapper.find('[data-test="phone"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="load-error"]').exists()).toBe(false)
   })
 
-  it('says so when the API is not answering', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
+  it('goes to the group step for a signed in person without a group', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(me(null))))
 
     const wrapper = mount(App)
     await flushPromises()
 
-    expect(wrapper.get('[data-test="api"]').text()).toBe('The API is having a lie-in.')
+    expect(wrapper.find('[data-test="parent-name"]').exists()).toBe(true)
+  })
+
+  it('goes straight home when there is a group', async () => {
+    const household = { id: 'h1', name: 'The Martins', createdAt: '', helpers: [] }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(me(household))))
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('The Martins')
+    expect(wrapper.find('[data-test="number-soon"]').exists()).toBe(true)
+  })
+
+  it('moves from phone to code after the code is sent', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ error: 'unauthorized' }, { status: 401 }))
+      .mockResolvedValueOnce(Response.json({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('[data-test="phone"]').setValue('07700 900001')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="code"]').exists()).toBe(true)
+    expect(JSON.parse(fetchMock.mock.calls[1]![1].body)).toEqual({ phone: '+447700900001' })
   })
 })

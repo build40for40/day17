@@ -1,0 +1,37 @@
+import { MAX_HELPERS, MAX_SIGNALS_PER_DAY, MAX_SIGNAL_LENGTH, type ErrorCode } from 'contract'
+
+import { ApiError } from './api'
+
+export const errorMessages: Record<ErrorCode | 'network', string> = {
+  network: "Can't reach the bat cave. Check your signal and try again.",
+  invalid_json: 'Something went sideways on our end. Give it another go.',
+  invalid_request: "That didn't look right. Check the fields and try again.",
+  payload_too_large: 'That is a lot of text. Trim it down a bit.',
+  unsupported_media_type: 'Something went sideways on our end. Give it another go.',
+  invalid_phone: "That number doesn't look right, or isn't a UK or French one. Try something like 07700 900123.",
+  invalid_name: 'Everyone needs a name, and not a novel. Keep it short.',
+  invalid_code: "That code doesn't match. Have another look at the text.",
+  turnstile_failed: "We couldn't tell you apart from a robot. Refresh and try again.",
+  rate_limited: "That's a lot in a short time. Wait a bit and try again.",
+  too_many_attempts: 'Too many wrong guesses. Ask for a fresh code.',
+  unauthorized: 'Your session ran out. Sign in again with your number.',
+  forbidden: "You're not allowed to do that.",
+  already_has_household: 'You already have a group. One per parent for now.',
+  no_household: 'Set up your group first.',
+  too_many_helpers: `${MAX_HELPERS} helpers is the limit. Even batman has a short list.`,
+  duplicate_helper: 'The same number is on your list twice.',
+  signal_too_long: `Keep it under ${MAX_SIGNAL_LENGTH} characters. Nobody reads an essay in an emergency.`,
+  too_many_signals: `That is ${MAX_SIGNALS_PER_DAY} signals in 24 hours. Try again later, or just call someone.`,
+  no_open_signal: 'There is no open signal to close.',
+  not_found: "We couldn't find that.",
+  method_not_allowed: 'Something went sideways on our end. Give it another go.',
+  not_implemented: "That bit isn't built yet. Check back soon.",
+  internal_error: 'Something broke on our side. Try again in a moment.',
+}
+
+export function messageFor(error: unknown): string {
+  const code = error instanceof ApiError ? error.code : 'internal_error'
+  return errorMessages[code]
+}
+
+export const isUnauthorized = (error: unknown) => error instanceof ApiError && error.code === 'unauthorized'
