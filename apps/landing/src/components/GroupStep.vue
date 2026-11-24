@@ -24,12 +24,12 @@ const addHelper = () => {
 const removeHelper = (index: number) => helpers.value.splice(index, 1)
 
 function validate(): { helpers: HelperInput[] } | string {
-  if (!parentName.value.trim() || !householdName.value.trim()) return 'Tell us your name and a name for the group.'
-  if (helpers.value.length === 0) return 'Add at least one helper. A bat signal needs someone to see it.'
+  if (!parentName.value.trim() || !householdName.value.trim()) return "Tell us your name and what the group is for."
+  if (helpers.value.length === 0) return 'Add at least one person. A lantern needs someone to see it.'
   const cleaned: HelperInput[] = []
   for (const helper of helpers.value) {
     const name = helper.name.trim()
-    if (!name) return 'Every helper needs a name.'
+    if (!name) return 'Everyone needs a name.'
     if (!helper.phone) return `${name}'s number doesn't look like a phone number. Check the country code and the digits.`
     cleaned.push({ name, phone: helper.phone })
   }
@@ -67,18 +67,18 @@ async function submit() {
       <img class="lantern" :src="lanternThumbs" alt="" />
       <h2>{{ props.knownName ? 'A new group' : 'Step 3: your people' }}</h2>
     </div>
-    <p>Who should get the signal? We'll text each of them once to say hello. If someone wants out, they'll ask you.</p>
+    <p>Who would you call for this kind of help? We'll text each of them once to say hello. If someone wants out, they'll ask you.</p>
     <label v-if="!props.knownName">
       Your name
       <input v-model="parentName" autocomplete="name" :maxlength="MAX_NAME_LENGTH" data-test="parent-name" />
     </label>
     <label>
-      Name for the group
-      <input v-model="householdName" placeholder="The Martin crew" :maxlength="MAX_NAME_LENGTH" data-test="group-name" />
+      What's this group for?
+      <input v-model="householdName" placeholder="School pickup" :maxlength="MAX_NAME_LENGTH" data-test="group-name" />
     </label>
 
     <fieldset>
-      <legend>Helpers ({{ helpers.length }} of {{ MAX_HELPERS }})</legend>
+      <legend>Your people ({{ helpers.length }} of {{ MAX_HELPERS }})</legend>
       <div v-for="(helper, index) in helpers" :key="helper.id" class="helper" data-test="helper-row">
         <input v-model="helper.name" placeholder="Name" aria-label="Helper name" :maxlength="MAX_NAME_LENGTH" />
         <PhoneField v-model="helper.phone" label="Helper phone" />
@@ -87,7 +87,7 @@ async function submit() {
         </button>
       </div>
       <button class="link" type="button" :disabled="helpers.length >= MAX_HELPERS" data-test="add" @click="addHelper">
-        Add another helper
+        Add another person
       </button>
     </fieldset>
 

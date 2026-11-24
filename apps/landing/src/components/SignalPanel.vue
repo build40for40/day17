@@ -82,7 +82,7 @@ const solve = () =>
       <div class="card-head">
         <img class="lantern" :src="lantern" alt="" data-test="lantern" />
         <div>
-          <p class="eyebrow" data-test="stage">{{ onIt ? `${onIt.name} is on it` : 'Signal is up' }}</p>
+          <p class="eyebrow" data-test="stage">{{ onIt ? `${onIt.name} is on it` : 'Lantern lit' }}</p>
           <p class="ask" data-test="open-text">{{ openSignal.text }}</p>
         </div>
       </div>
@@ -102,15 +102,15 @@ const solve = () =>
           </button>
         </li>
       </ul>
-      <button class="solved" type="button" :disabled="busy" data-test="solve" @click="solve">Solved</button>
+      <button class="solved" type="button" :disabled="busy" data-test="solve" @click="solve">Sorted</button>
     </template>
 
     <div v-else-if="!composing" class="card-head">
       <img class="lantern" :src="lantern" alt="" data-test="lantern" />
-      <p class="muted">All quiet. Light the signal when you need your people.</p>
+      <p class="muted">All quiet. Light a lantern when you need a hand.</p>
     </div>
     <button v-if="!openSignal && !composing" class="red" type="button" data-test="red-button" @click="composing = true">
-      Send the signal
+      Light a lantern
     </button>
 
     <button v-if="openSignal && !composing" class="link" type="button" data-test="update" @click="composing = true">
@@ -119,12 +119,12 @@ const solve = () =>
 
     <form v-if="composing" novalidate @submit.prevent="send">
       <label>
-        {{ openSignal ? 'What is the update?' : 'What do you need?' }}
+        {{ openSignal ? "What's the update?" : 'What do you need, and when?' }}
         <textarea
           v-model="text"
           rows="3"
           :maxlength="MAX_SIGNAL_LENGTH"
-          placeholder="Can anyone grab Léa at 5?"
+          placeholder="Can anyone grab Léa from school at 5?"
           data-test="text"
         />
       </label>
@@ -135,7 +135,7 @@ const solve = () =>
       <p v-if="error" class="error" role="alert" data-test="error">{{ error }}</p>
       <div class="row">
         <button class="primary" type="submit" :disabled="busy" data-test="send">
-          {{ openSignal ? 'Send update' : 'Send it' }}
+          {{ openSignal ? 'Send update' : 'Light it' }}
         </button>
         <button class="link" type="button" @click="composing = false">Cancel</button>
       </div>

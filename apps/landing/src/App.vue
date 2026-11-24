@@ -82,17 +82,17 @@ onUnmounted(() => {
         My profile
       </button>
     </div>
-    <h1>A bat signal for when the day falls apart.</h1>
+    <h1>Light a lantern when you need a hand.</h1>
 
     <template v-if="step === 'phone' || step === 'code'">
       <div class="welcome-lantern"><img class="lantern" :src="lanternHug" alt="A paper lantern hugging a small child" /></div>
       <p class="pitch">
-        Hospital run, no nappies, stuck at work at pickup time. Send one ask and everyone you trust gets a text at once.
-        No app to install, and it works on grandma's phone too.
+        Stuck at work at pickup time. The babysitter cancelled. Light a lantern and everyone you trust gets a text at
+        once. No app to install, and it works on grandma's phone too.
       </p>
     </template>
 
-    <p v-if="step === 'loading'" class="muted" data-test="loading">Warming up the lamp...</p>
+    <p v-if="step === 'loading'" class="muted" data-test="loading">Lighting the lantern...</p>
     <p v-if="loadError" class="error" role="alert" data-test="load-error">{{ loadError }}</p>
 
     <PhoneStep v-if="step === 'phone'" @sent="(p) => { phone = p; step = 'code' }" />

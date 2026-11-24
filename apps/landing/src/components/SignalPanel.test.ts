@@ -71,7 +71,7 @@ describe('SignalPanel', () => {
 
     await wrapper.get('[data-test="update"]').trigger('click')
 
-    expect(wrapper.text()).toContain('What is the update?')
+    expect(wrapper.text()).toContain("What's the update?")
   })
 
   it('shows where each helper is and confirms one who offered', async () => {
