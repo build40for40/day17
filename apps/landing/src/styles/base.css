@@ -643,7 +643,7 @@ footer a {
   }
 }
 
-/* Sign-in screen: what it's for (four scenes) and how it works, beside the form on wide screens. */
+/* Sign-in screen: what it's for (four scenes) and how it works. Wide screens put the form beside the scenes. */
 main.wide {
   max-width: 68rem;
 }
@@ -765,19 +765,32 @@ main.wide {
 @media (min-width: 56rem) {
   .welcome {
     grid-template-columns: minmax(0, 1fr) minmax(0, 25rem);
-    grid-template-rows: auto auto auto 1fr;
+    grid-template-rows: auto auto 1fr auto;
     grid-template-areas:
       'title scenes'
       'pitch scenes'
-      'how scenes'
-      'form scenes';
+      'form scenes'
+      'how how';
     column-gap: 3rem;
+    row-gap: 1.25rem;
     align-items: start;
   }
 
+  /* The form sits beside the pictures so it's in view without scrolling; the steps run across underneath. */
+  .welcome-form .card {
+    margin-bottom: 0;
+  }
+
+  .how {
+    margin-top: 1rem;
+  }
+
+  .how ol {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+
   .scenes {
-    position: sticky;
-    top: 1.5rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.9rem;
     font-size: 0.95rem;
