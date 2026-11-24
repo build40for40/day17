@@ -11,7 +11,8 @@ import ProfileView from './components/ProfileView.vue'
 import { messageFor } from './errors'
 import scenePickup from './assets/scene-pickup.jpg'
 import sceneBabysitting from './assets/scene-babysitting.jpg'
-import sceneParcel from './assets/scene-parcel.jpg'
+import sceneGp from './assets/scene-gp.jpg'
+import scenePharmacy from './assets/scene-pharmacy.jpg'
 
 type Step = 'loading' | 'phone' | 'code' | 'group' | 'home'
 
@@ -94,13 +95,14 @@ onUnmounted(() => {
       <ul class="scenes" aria-label="What people use it for">
         <li><img :src="scenePickup" alt="A paper lantern walking a girl out of the school gate" /><span>School pickup</span></li>
         <li><img :src="sceneBabysitting" alt="A paper lantern reading a bedtime story to a sleepy boy" /><span>Babysitting</span></li>
-        <li><img :src="sceneParcel" alt="A paper lantern carrying a parcel to a neighbour's door" /><span>Parcels</span></li>
+        <li><img :src="sceneGp" alt="A paper lantern walking a boy into the doctor's surgery" /><span>GP visit</span></li>
+        <li><img :src="scenePharmacy" alt="A paper lantern collecting medicine at the pharmacy" /><span>Pharmacy</span></li>
       </ul>
 
       <section class="how" aria-labelledby="how-h">
         <h2 id="how-h">How it works</h2>
         <ol>
-          <li><b>Make a group.</b> School pickup, babysitting, anything. Add the people you'd call.</li>
+          <li><b>Make a group.</b> School pickup, babysitting, a trip to the GP. Add the people you'd call.</li>
           <li><b>Light a lantern.</b> Say what you need and when. We tick the right group, and everyone in it gets a text at once.</li>
           <li><b>Someone says they're on it.</b> You see who, and mark it sorted.</li>
         </ol>

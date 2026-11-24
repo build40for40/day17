@@ -620,7 +620,7 @@ footer a {
   }
 }
 
-/* Sign-in screen: what it's for (three scenes) and how it works, beside the form on wide screens. */
+/* Sign-in screen: what it's for (four scenes) and how it works, beside the form on wide screens. */
 main.wide {
   max-width: 68rem;
 }
@@ -652,8 +652,8 @@ main.wide {
 .scenes {
   grid-area: scenes;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.6rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -663,8 +663,9 @@ main.wide {
   display: grid;
   gap: 0.35rem;
   text-align: center;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .scenes img {
@@ -757,10 +758,6 @@ main.wide {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.9rem;
     font-size: 0.95rem;
-  }
-
-  .scenes li:first-child {
-    grid-column: 1 / -1;
   }
 
   .scenes img {

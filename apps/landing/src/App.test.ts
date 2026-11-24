@@ -28,7 +28,7 @@ describe('App', () => {
     const wrapper = mount(App)
     await flushPromises()
 
-    expect(wrapper.findAll('.scenes li').map((li) => li.text())).toEqual(['School pickup', 'Babysitting', 'Parcels'])
+    expect(wrapper.findAll('.scenes li').map((li) => li.text())).toEqual(['School pickup', 'Babysitting', 'GP visit', 'Pharmacy'])
     expect(wrapper.findAll('.how li')).toHaveLength(3)
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(me(null))))
