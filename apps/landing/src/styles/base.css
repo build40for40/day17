@@ -569,8 +569,19 @@ footer a {
   margin-bottom: 0;
 }
 
-.hint {
-  font-size: 0.8125rem;
+.picker .chip {
+  color: var(--ink);
+  background: var(--field);
+  border-color: var(--line);
+}
+
+.picker .chip.active {
+  color: #ffffff;
+  background: var(--dusk-deep);
+  border-color: var(--dusk-deep);
+}
+
+.picker .hint {
   font-weight: 400;
 }
 
