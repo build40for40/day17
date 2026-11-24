@@ -23,6 +23,22 @@ describe('App', () => {
     expect(wrapper.find('[data-test="load-error"]').exists()).toBe(false)
   })
 
+  it('shows what it is for and how it works before sign-in, and not after', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ error: 'unauthorized' }, { status: 401 })))
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(wrapper.findAll('.scenes li').map((li) => li.text())).toEqual(['School pickup', 'Babysitting', 'Parcels'])
+    expect(wrapper.findAll('.how li')).toHaveLength(3)
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(me(null))))
+    const signedIn = mount(App)
+    await flushPromises()
+
+    expect(signedIn.find('.scenes').exists()).toBe(false)
+    expect(signedIn.find('.how').exists()).toBe(false)
+  })
+
   it('goes to the group step for a signed in person without a group', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(me(null))))
 
