@@ -69,7 +69,7 @@ describe('SignalComposer', () => {
 
     await type(wrapper, "Who's playing at 10?")
 
-    expect(fetchMock.mock.calls[0]![0]).toBe('/day17/api/v1/signals/match')
+    expect(fetchMock.mock.calls[0]![0]).toBe('/lantern/api/v1/signals/match')
     expect(picked(wrapper)).toEqual(['false', 'true'])
     expect(wrapper.findAll('[data-test="pick-group"]')[1]!.text()).toContain('60%')
 

@@ -32,7 +32,7 @@ describe('HelpersCard', () => {
     await wrapper.get('[data-test="add-helper-form"]').trigger('submit')
     await flushPromises()
 
-    expect(fetchMock.mock.calls[0]![0]).toBe('/day17/api/v1/households/helpers')
+    expect(fetchMock.mock.calls[0]![0]).toBe('/lantern/api/v1/households/helpers')
     expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ householdId: 'h1', name: 'Nan', phone: '+447700900111' })
     expect(wrapper.emitted('changed')).toHaveLength(1)
     expect(wrapper.find('[data-test="add-helper-form"]').exists()).toBe(false)
@@ -64,7 +64,7 @@ describe('HelpersCard', () => {
     await wrapper.get('[data-test="confirm-remove-helper"]').trigger('click')
     await flushPromises()
 
-    expect(fetchMock.mock.calls[0]![0]).toBe('/day17/api/v1/households/helpers?personId=p0&id=h1')
+    expect(fetchMock.mock.calls[0]![0]).toBe('/lantern/api/v1/households/helpers?personId=p0&id=h1')
     expect(fetchMock.mock.calls[0]![1].method).toBe('DELETE')
     expect(wrapper.emitted('changed')).toHaveLength(1)
   })

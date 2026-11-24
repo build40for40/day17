@@ -28,7 +28,7 @@ jobs:
         with:
           api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           working-directory: apps/landing
-          path: /day17/
+          path: /lantern/
           package-manager: ${{ steps.setup.outputs.package-manager }}
 
   deploy:

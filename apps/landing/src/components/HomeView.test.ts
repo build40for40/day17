@@ -55,7 +55,7 @@ describe('HomeView', () => {
     await wrapper.get('[data-test="confirm-delete"]').trigger('click')
     await flushPromises()
 
-    expect(fetchMock.mock.calls[0]![0]).toBe('/day17/api/v1/households/mine?id=h1')
+    expect(fetchMock.mock.calls[0]![0]).toBe('/lantern/api/v1/households/mine?id=h1')
     expect(fetchMock.mock.calls[0]![1].method).toBe('DELETE')
     expect(wrapper.emitted('deleted')).toHaveLength(1)
   })

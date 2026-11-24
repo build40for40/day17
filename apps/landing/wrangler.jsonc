@@ -7,8 +7,8 @@
     "directory": "./dist"
   },
   "routes": [
-    { "pattern": "build40for40.com/day17", "zone_name": "build40for40.com" },
-    { "pattern": "build40for40.com/day17/*", "zone_name": "build40for40.com" }
+    { "pattern": "build40for40.com/lantern", "zone_name": "build40for40.com" },
+    { "pattern": "build40for40.com/lantern/*", "zone_name": "build40for40.com" }
   ],
   "workers_dev": true,
   "preview_urls": true,

@@ -1,22 +1,22 @@
-# Day 17
+# Lantern
 
-Day 17 of 40 for 40, built live on Twitch on Tuesday 24 November 2026. The problem is "Buried neighbourhood favour requests", from Anastasia. The answer is a "bat signal": one named ask, sent to a group of helpers by SMS or phone call. Work is tracked on the Superthread `day17` board and the "Day 17 - plan & brief" page.
+Lantern is Day 17 of 40 for 40, built live on Twitch on Tuesday 24 November 2026. The problem is "Buried neighbourhood favour requests", from Anastasia. The answer is a lantern you light when you need a hand: one named ask, sent to a group of helpers by SMS or phone call. Work is tracked on the Superthread `day17` board and the "Day 17 - plan & brief" page.
 
 - **Form factor:** agent. It reaches people by SMS and phone calls, with a web page for sign-up and for sending the signal. No native app and no WhatsApp for now.
-- **Name:** TBC. The repo, the Workers and the URL path are all `day17` until the app has one.
+- **Name:** Lantern, at `build40for40.com/lantern/`. The repo, the Workers, the D1 database and the session cookie keep the `day17` name.
 
 ## Layout
 
 A pnpm workspace. Install with `pnpm install` from the root, and add dependencies with `pnpm --filter <package> add <dep>`.
 
-- **`apps/landing`:** the landing page, Vue 3 and Vite, built into `dist/day17/` and served as static assets by the `day17` Worker at `build40for40.com/day17/`.
-- **`workers/api`:** the `day17-api` Worker at `build40for40.com/day17/api`, with every route under `/day17/api/v1`. Its routes are more specific than the landing page's, so they win. Code is split by feature: `verify/` (SMS code sign-in), `households/` (`/me`, sign-up, delete), `signals/` (the red button, matching an ask to groups, inbound SMS routing and the hourly cron) and `sms/` (the provider interface, the fake and Textbelt providers and every system text).
+- **`apps/landing`:** the landing page, Vue 3 and Vite, built into `dist/lantern/` and served as static assets by the `day17` Worker at `build40for40.com/lantern/`.
+- **`workers/api`:** the `day17-api` Worker at `build40for40.com/lantern/api`, with every route under `/lantern/api/v1`. Its routes are more specific than the landing page's, so they win. Code is split by feature: `verify/` (SMS code sign-in), `households/` (`/me`, sign-up, delete), `signals/` (the red button, matching an ask to groups, inbound SMS routing and the hourly cron) and `sms/` (the provider interface, the fake and Textbelt providers and every system text).
 - **`packages/contract`:** shared request and response types, error codes, limits and the `normalisePhone` helper, imported as `contract` by both the landing page and the API. Its `exports` point at the TypeScript source, so there's no build step.
 - **`workers/*` and `packages/*`:** new Workers and shared code go here, one folder each. A new Worker needs its own `wrangler` script, the account's `account_id`, and a deploy step in CI.
 
 ## Commands
 
-- `pnpm dev` applies the D1 migrations locally, then runs the landing page on 5173 and the API on 8787, with Vite proxying `/day17/api`. Open http://localhost:5173/day17/. Copy `workers/api/.dev.vars.example` to `workers/api/.dev.vars` first and set `SESSION_SECRET` to any long random string.
+- `pnpm dev` applies the D1 migrations locally, then runs the landing page on 5173 and the API on 8787, with Vite proxying `/lantern/api`. Open http://localhost:5173/lantern/. Copy `workers/api/.dev.vars.example` to `workers/api/.dev.vars` first and set `SESSION_SECRET` to any long random string.
 - `pnpm typecheck`, `pnpm test` and `pnpm build` run across the workspace. Tests sit next to the file they cover. `workers/api/src/flow.int.test.ts` runs the whole sign-up and signal flow through the router with the fake provider.
 - `pnpm --filter api migrate` applies `workers/api/migrations/` to the local D1 database in `workers/api/.wrangler/`. Delete that folder to start from an empty database.
 - `pnpm --filter api types` regenerates `worker-configuration.d.ts` after a change to the API's `wrangler.jsonc`.
@@ -75,7 +75,7 @@ Used by `pnpm dev` and the tests.
 No texts leave the machine. The fake provider prints every outbound text in the API's `wrangler dev` output as `[fake sms] to +447700900400: ...`, which is where sign-in codes show up. Its inbound webhook takes plain JSON, so you can play any phone with curl. Every JSON route needs `content-type: application/json`, which keeps plain HTML forms on other build40for40.com pages from posting to it:
 
 ```sh
-B=http://localhost:5173/day17/api/v1
+B=http://localhost:5173/lantern/api/v1
 curl -X POST $B/verify/start -H 'content-type: application/json' -d '{"phone":"07700 900400"}'
 curl -c jar -X POST $B/verify/check -H 'content-type: application/json' -d '{"phone":"+447700900400","code":"<code from the log>"}'
 curl -b jar -X POST $B/households -H 'content-type: application/json' \

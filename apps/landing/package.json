@@ -2,7 +2,7 @@
   "name": "landing",
   "version": "0.0.0",
   "private": true,
-  "description": "The Day 17 landing page.",
+  "description": "The Lantern landing page.",
   "type": "module",
   "scripts": {
     "dev": "vite",

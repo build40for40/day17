@@ -2,7 +2,7 @@ import { SESSION_TTL_SECONDS } from "contract";
 import { error } from "./http";
 
 export const SESSION_COOKIE = "day17_session";
-const COOKIE_ATTRIBUTES = "Path=/day17; HttpOnly; Secure; SameSite=Lax";
+const COOKIE_ATTRIBUTES = "Path=/lantern; HttpOnly; Secure; SameSite=Lax";
 
 export type Session = { personId: string };
 type Payload = { personId: string; exp: number };

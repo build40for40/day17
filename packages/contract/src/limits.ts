@@ -1,4 +1,4 @@
-export const API_BASE = "/day17/api/v1";
+export const API_BASE = "/lantern/api/v1";
 
 export const MAX_HELPERS = 10;
 export const MAX_HOUSEHOLDS = 5;
