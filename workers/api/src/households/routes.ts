@@ -3,11 +3,13 @@ import {
   MAX_HOUSEHOLDS,
   MAX_NAME_LENGTH,
   normalisePhone,
+  type AddHelperResponse,
   type CreateHouseholdResponse,
   type Group,
   type Household,
   type HelperInput,
   type MeResponse,
+  type RemoveHelperResponse,
 } from "contract";
 import {
   newId,
@@ -201,4 +203,92 @@ export const handleDeleteHousehold: Handler = async (request, env) => {
   ]);
 
   return noContent({ "Set-Cookie": clearSessionCookie() });
+};
+
+type OwnedHousehold = { person: PersonRow; household: Household };
+
+async function requireOwnedHousehold(request: Request, env: Env, householdId: unknown): Promise<OwnedHousehold | Response> {
+  const session = await requireSession(request, env);
+  if (session instanceof Response) return session;
+
+  const person = await findPerson(env, session.personId);
+  if (!person) return error("unauthorized", 401);
+
+  const households = await loadOwnedHouseholds(env, person.id);
+  if (households.length === 0) return error("no_household", 404);
+  if (householdId === undefined || householdId === null) {
+    return households.length === 1 ? { person, household: households[0]! } : error("invalid_request", 400);
+  }
+  const household = households.find((owned) => owned.id === householdId);
+  return household ? { person, household } : error("no_household", 404);
+}
+
+async function reloadHousehold(env: Env, id: string): Promise<Household> {
+  const row = await env.DB.prepare("SELECT * FROM households WHERE id = ?").bind(id).first<HouseholdRow>();
+  return loadHousehold(env, row!);
+}
+
+export const handleAddHelper: Handler = async (request, env) => {
+  const body = await readJson(request);
+  if (!body.ok) return body.response;
+  if (!isRecord(body.data)) return error("invalid_request", 400);
+
+  const owned = await requireOwnedHousehold(request, env, body.data.householdId);
+  if (owned instanceof Response) return owned;
+  const { person, household } = owned;
+
+  const name = cleanName(body.data.name);
+  if (!name) return error("invalid_name", 400);
+  const phone = typeof body.data.phone === "string" ? normalisePhone(body.data.phone) : null;
+  const signalNumber = env.SIGNAL_NUMBER ? normalisePhone(env.SIGNAL_NUMBER) : null;
+  if (!phone || phone === signalNumber) return error("invalid_phone", 400);
+  if (phone === person.phone || household.helpers.some((helper) => helper.phone === phone)) return error("duplicate_helper", 400);
+  if (household.helpers.length >= MAX_HELPERS) return error("too_many_helpers", 400);
+  if (!(await take(env.DB, limits.helperAdd(person.phone)))) return error("rate_limited", 429);
+
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO people (id, phone) VALUES (?, ?) ON CONFLICT (phone) DO NOTHING").bind(newId(), phone),
+    env.DB.prepare(
+      `INSERT INTO memberships (household_id, person_id, role, name)
+       SELECT ?, id, 'helper', ? FROM people WHERE phone = ?`,
+    ).bind(household.id, name, phone),
+  ]);
+
+  const updated = await reloadHousehold(env, household.id);
+  const added = updated.helpers.find((helper) => helper.phone === phone)!;
+  if (!added.optedOut) {
+    await sendAll(env, [
+      { to: phone, body: welcome(person.name ?? "", household.name), kind: "welcome", householdId: household.id, personId: added.id },
+    ]);
+  }
+
+  return json({ household: updated } satisfies AddHelperResponse, 201);
+};
+
+export const handleRemoveHelper: Handler = async (request, env) => {
+  const params = new URL(request.url).searchParams;
+  const owned = await requireOwnedHousehold(request, env, params.get("id"));
+  if (owned instanceof Response) return owned;
+  const { household } = owned;
+
+  const helper = household.helpers.find((member) => member.id === params.get("personId"));
+  if (!helper) return error("not_found", 404);
+
+  await env.DB.batch([
+    env.DB.prepare(
+      "DELETE FROM signal_recipients WHERE person_id = ?1 AND signal_id IN (SELECT id FROM signals WHERE household_id = ?2)",
+    ).bind(helper.id, household.id),
+    env.DB.prepare("UPDATE signals SET signed_off_person_id = NULL WHERE household_id = ?2 AND signed_off_person_id = ?1").bind(
+      helper.id,
+      household.id,
+    ),
+    env.DB.prepare("DELETE FROM messages WHERE household_id = ?2 AND (person_id = ?1 OR phone = ?3)").bind(
+      helper.id,
+      household.id,
+      helper.phone,
+    ),
+    env.DB.prepare("DELETE FROM memberships WHERE household_id = ?2 AND person_id = ?1 AND role = 'helper'").bind(helper.id, household.id),
+  ]);
+
+  return json({ household: await reloadHousehold(env, household.id) } satisfies RemoveHelperResponse);
 };

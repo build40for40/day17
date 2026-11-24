@@ -7,6 +7,7 @@ export const MAX_CODES_PER_IP_PER_HOUR = 10;
 export const MAX_CODES_PER_HOUR_GLOBAL = 500;
 export const MAX_BROADCASTS_PER_DAY = 30;
 export const MAX_HOUSEHOLDS_PER_DAY = 3;
+export const MAX_HELPER_ADDS_PER_DAY = 20;
 export const REPLY_COOLDOWN_MS = HOUR_MS;
 
 export const limits = {
@@ -14,6 +15,7 @@ export const limits = {
   verifyIp: (ip: string) => ({ key: `verify-ip:${ip}`, max: MAX_CODES_PER_IP_PER_HOUR, windowMs: HOUR_MS }),
   broadcast: (phone: string) => ({ key: `broadcast:${phone}`, max: MAX_BROADCASTS_PER_DAY, windowMs: DAY_MS }),
   household: (phone: string) => ({ key: `household:${phone}`, max: MAX_HOUSEHOLDS_PER_DAY, windowMs: DAY_MS }),
+  helperAdd: (phone: string) => ({ key: `helper-add:${phone}`, max: MAX_HELPER_ADDS_PER_DAY, windowMs: DAY_MS }),
   reply: (kind: string, phone: string) => ({ key: `reply:${kind}:${phone}`, max: 1, windowMs: REPLY_COOLDOWN_MS }),
 };
 

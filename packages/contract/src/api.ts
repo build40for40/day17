@@ -97,6 +97,10 @@ export type CreateHouseholdRequest = {
 };
 export type CreateHouseholdResponse = { household: Household };
 
+export type AddHelperRequest = HelperInput & { householdId?: string };
+export type AddHelperResponse = { household: Household };
+export type RemoveHelperResponse = { household: Household };
+
 export type CreateSignalRequest = { text: string; householdId?: string };
 export type CreateSignalResponse = { signal: Signal };
 
