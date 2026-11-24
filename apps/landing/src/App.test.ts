@@ -41,7 +41,7 @@ describe('App', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('The Martins')
-    expect(wrapper.find('[data-test="number-soon"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="delete"]').exists()).toBe(true)
   })
 
   it('moves from phone to code after the code is sent', async () => {

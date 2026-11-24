@@ -31,6 +31,31 @@ describe("sendAll", () => {
     expect(results[1]?.provider_id).toBeNull();
   });
 
+  it("sends one text at a time, in order", async () => {
+    const sent: string[] = [];
+    let inFlight = 0;
+    let most = 0;
+    const provider = {
+      gapMs: 1,
+      async send({ to }: { to: string }) {
+        most = Math.max(most, ++inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        inFlight--;
+        sent.push(to);
+        return { providerId: null };
+      },
+      async verifyAndParseInbound() {
+        return null;
+      },
+    };
+    const numbers = ["+447700900001", "+447700900002", "+447700900003"];
+
+    await sendAll(env, numbers.map((to) => ({ to, body: "Need a pickup at 5", kind: "signal" as const, householdId: "h1" })), provider);
+
+    expect(sent).toEqual(numbers);
+    expect(most).toBe(1);
+  });
+
   it("does nothing with no deliveries", async () => {
     expect(await sendAll(env, [])).toEqual([]);
   });

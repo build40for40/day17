@@ -26,11 +26,11 @@ describe('HomeView', () => {
     expect(wrapper.text()).toContain('Nan')
   })
 
-  it('says the number is on its way when there is none', () => {
+  it('leaves the number out when there is none', () => {
     const wrapper = mount(HomeView, { props: { me: me(null) } })
 
     expect(wrapper.find('[data-test="number"]').exists()).toBe(false)
-    expect(wrapper.get('[data-test="number-soon"]').text()).toContain('on its way')
+    expect(wrapper.text()).not.toContain('Your number to text')
   })
 
   it('needs a confirm before deleting, then emits deleted', async () => {

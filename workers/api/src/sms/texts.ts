@@ -10,7 +10,7 @@ export function verificationCode(code: string): string {
 }
 
 export function welcome(parentName: string, householdName: string): string {
-  return `${parentName} picked you as a helper for ${householdName}. When they need a hand you'll get a text from this number. Reply STOP to opt out.`;
+  return `${parentName} picked you as a helper for ${householdName}. When they need a hand you'll get a text from bat signal. Not for you? Ask them to take you off the list.`;
 }
 
 export function allClear(parentName: string): string {
