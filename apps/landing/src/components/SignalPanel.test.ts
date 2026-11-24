@@ -27,7 +27,7 @@ describe('SignalPanel', () => {
     await wrapper.get('[data-test="solve"]').trigger('click')
     await flushPromises()
 
-    expect(fetchMock.mock.calls[0]![0]).toBe('/day17/api/v1/signals/solve')
+    expect(fetchMock.mock.calls[0]![0]).toBe('/lantern/api/v1/signals/solve')
     expect(wrapper.emitted('changed')).toEqual([[null]])
   })
 
@@ -62,7 +62,7 @@ describe('SignalPanel', () => {
     await wrapper.get('[data-test="confirm"]').trigger('click')
     await flushPromises()
 
-    expect(fetchMock.mock.calls[0]![0]).toBe('/day17/api/v1/signals/sign-off')
+    expect(fetchMock.mock.calls[0]![0]).toBe('/lantern/api/v1/signals/sign-off')
     expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ householdId: 'h1', personId: 'p1' })
     expect(wrapper.emitted('changed')).toEqual([[{ ...signal, signedOffPersonId: 'p1' }]])
   })

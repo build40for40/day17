@@ -11,7 +11,7 @@ describe('api client', () => {
 
     await sendSignal(['h1'], 'help')
 
-    expect(fetchMock).toHaveBeenCalledWith('/day17/api/v1/signals', {
+    expect(fetchMock).toHaveBeenCalledWith('/lantern/api/v1/signals', {
       method: 'POST',
       credentials: 'include',
       headers: { 'content-type': 'application/json' },

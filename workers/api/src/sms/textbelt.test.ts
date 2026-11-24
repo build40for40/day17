@@ -34,7 +34,7 @@ describe("textbelt provider", () => {
   });
 
   it("takes no inbound texts", async () => {
-    const request = new Request("https://build40for40.com/day17/api/v1/sms/inbound", {
+    const request = new Request("https://build40for40.com/lantern/api/v1/sms/inbound", {
       method: "POST",
       body: JSON.stringify({ from: theo.phone, body: "SOLVED" }),
     });

@@ -14,7 +14,7 @@ const PHONE = "+447700900201";
 
 const post = (handler: Handler, body: unknown, environment: Env = env, ip = "203.0.113.7") =>
   handler(
-    new Request("https://build40for40.com/day17/api/v1/verify", {
+    new Request("https://build40for40.com/lantern/api/v1/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json", "CF-Connecting-IP": ip },
       body: typeof body === "string" ? body : JSON.stringify(body),
@@ -53,7 +53,7 @@ describe("verify routes", () => {
 
     const person = await env.DB.prepare("SELECT id FROM people WHERE phone = ?").bind(PHONE).first<{ id: string }>();
     const cookie = response.headers.get("Set-Cookie")!.split(";")[0]!;
-    const session = await readSession(new Request("https://build40for40.com/day17/", { headers: { Cookie: cookie } }), env);
+    const session = await readSession(new Request("https://build40for40.com/lantern/", { headers: { Cookie: cookie } }), env);
     expect(session).toEqual({ personId: person!.id });
   });
 

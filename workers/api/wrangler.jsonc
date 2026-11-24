@@ -5,8 +5,8 @@
   "compatibility_date": "2026-11-04",
   "main": "src/index.ts",
   "routes": [
-    { "pattern": "build40for40.com/day17/api", "zone_name": "build40for40.com" },
-    { "pattern": "build40for40.com/day17/api/*", "zone_name": "build40for40.com" }
+    { "pattern": "build40for40.com/lantern/api", "zone_name": "build40for40.com" },
+    { "pattern": "build40for40.com/lantern/api/*", "zone_name": "build40for40.com" }
   ],
   "workers_dev": false,
   "preview_urls": false,

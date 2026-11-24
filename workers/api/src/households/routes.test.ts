@@ -23,10 +23,10 @@ async function call(method: string, path: string, personId: string | null, body?
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (personId) headers.Cookie = (await createSessionCookie(env, personId)).split(";")[0]!;
   if (environment) {
-    const request = new Request(`https://build40for40.com/day17/api/v1${path}`, { method, headers, body: JSON.stringify(body) });
+    const request = new Request(`https://build40for40.com/lantern/api/v1${path}`, { method, headers, body: JSON.stringify(body) });
     return worker.fetch(request as Request<unknown, IncomingRequestCfProperties>, { ...env, ...environment }, createExecutionContext());
   }
-  return exports.default.fetch(`https://build40for40.com/day17/api/v1${path}`, {
+  return exports.default.fetch(`https://build40for40.com/lantern/api/v1${path}`, {
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -235,7 +235,7 @@ describe("POST /households", () => {
   });
 
   it("rejects invalid json", async () => {
-    const response = await exports.default.fetch("https://build40for40.com/day17/api/v1/households", {
+    const response = await exports.default.fetch("https://build40for40.com/lantern/api/v1/households", {
       method: "POST",
       headers: { Cookie: (await createSessionCookie(env, "parent")).split(";")[0]!, "Content-Type": "application/json" },
       body: "{",

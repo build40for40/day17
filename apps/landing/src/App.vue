@@ -81,7 +81,7 @@ onUnmounted(() => {
 <template>
   <main :class="{ wide: step === 'phone' || step === 'code' }">
     <div class="top">
-      <p class="day">40 for 40, Day 17</p>
+      <p class="day">Lantern · 40 for 40, Day 17</p>
       <button v-if="me && !onProfile" class="link" type="button" data-test="profile" @click="showProfile(true)">
         My profile
       </button>
@@ -152,7 +152,7 @@ onUnmounted(() => {
 
     <footer>
       We're building this live on
-      <a href="https://www.twitch.tv/40for40">Twitch</a>. The app has no name yet, so it's just Day 17.
+      <a href="https://www.twitch.tv/40for40">Twitch</a>. Lantern is Day 17 of 40 for 40.
     </footer>
   </main>
 </template>

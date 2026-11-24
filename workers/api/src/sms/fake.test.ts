@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { clearFakeOutbox, createFakeProvider, FAKE_FAILING_NUMBER, fakeOutbox } from "./fake";
 
 const inbound = (payload: unknown) =>
-  new Request("https://build40for40.com/day17/api/v1/sms/inbound", { method: "POST", body: JSON.stringify(payload) });
+  new Request("https://build40for40.com/lantern/api/v1/sms/inbound", { method: "POST", body: JSON.stringify(payload) });
 
 describe("fake provider", () => {
   const provider = createFakeProvider();
