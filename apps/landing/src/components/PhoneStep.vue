@@ -31,7 +31,7 @@ async function submit() {
 <template>
   <form class="card" novalidate @submit.prevent="submit">
     <h2>Step 1: your number</h2>
-    <p>We text you a code so we know it's really you. No passwords, no accounts to remember.</p>
+    <p>We'll text you a code to check it's you. No passwords.</p>
     <div class="field">
       <span>Your mobile number</span>
       <PhoneField v-model="phone" label="Your mobile number" autocomplete />

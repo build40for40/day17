@@ -3,7 +3,7 @@ import { MAX_HELPERS, MAX_SIGNALS_PER_DAY, MAX_SIGNAL_LENGTH, type ErrorCode } f
 import { ApiError } from './api'
 
 export const errorMessages: Record<ErrorCode | 'network', string> = {
-  network: "Can't reach the bat cave. Check your signal and try again.",
+  network: "We can't connect. Check your internet and try again.",
   invalid_json: 'Something went sideways on our end. Give it another go.',
   invalid_request: "That didn't look right. Check the fields and try again.",
   payload_too_large: 'That is a lot of text. Trim it down a bit.',
@@ -18,11 +18,11 @@ export const errorMessages: Record<ErrorCode | 'network', string> = {
   forbidden: "You're not allowed to do that.",
   too_many_households: "That's the most groups one person can have. Delete one to make room.",
   no_household: 'Set up your group first.',
-  too_many_helpers: `${MAX_HELPERS} helpers is the limit. Even batman has a short list.`,
+  too_many_helpers: `${MAX_HELPERS} people is the most a group can have.`,
   duplicate_helper: 'The same number is on your list twice.',
-  signal_too_long: `Keep it under ${MAX_SIGNAL_LENGTH} characters. Nobody reads an essay in an emergency.`,
-  too_many_signals: `That is ${MAX_SIGNALS_PER_DAY} signals in 24 hours. Try again later, or just call someone.`,
-  no_open_signal: 'There is no open signal right now.',
+  signal_too_long: `Keep it under ${MAX_SIGNAL_LENGTH} characters. Short asks get quicker answers.`,
+  too_many_signals: `That's ${MAX_SIGNALS_PER_DAY} lanterns in 24 hours. Try again later, or just call someone.`,
+  no_open_signal: "There's no lantern lit right now.",
   not_accepted: "They haven't said they can help yet, so there's nothing to confirm.",
   not_found: "We couldn't find that.",
   method_not_allowed: 'Something went sideways on our end. Give it another go.',
