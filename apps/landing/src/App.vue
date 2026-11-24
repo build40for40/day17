@@ -7,6 +7,7 @@ import CodeStep from './components/CodeStep.vue'
 import GroupStep from './components/GroupStep.vue'
 import HomeView from './components/HomeView.vue'
 import PhoneStep from './components/PhoneStep.vue'
+import ProfileView from './components/ProfileView.vue'
 import { messageFor } from './errors'
 
 type Step = 'loading' | 'phone' | 'code' | 'group' | 'home'
@@ -30,9 +31,21 @@ async function load() {
   }
 }
 
+const PROFILE_HASH = '#profile'
+const onProfile = ref(location.hash === PROFILE_HASH)
+const syncProfile = () => {
+  onProfile.value = location.hash === PROFILE_HASH
+}
+
+function showProfile(show: boolean) {
+  onProfile.value = show
+  location.hash = show ? PROFILE_HASH : ''
+}
+
 function signedOut() {
   me.value = null
   step.value = 'phone'
+  showProfile(false)
 }
 
 const REFRESH_MS = 8000
@@ -45,21 +58,29 @@ async function refresh() {
   }
 }
 
-
 let timer: ReturnType<typeof setInterval> | undefined
 
 onMounted(() => {
+  window.addEventListener('hashchange', syncProfile)
   void load()
   timer = setInterval(() => {
     if (step.value === 'home' && !adding.value && me.value?.groups.some((group) => group.openSignal) && !document.hidden) void refresh()
   }, REFRESH_MS)
 })
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => {
+  window.removeEventListener('hashchange', syncProfile)
+  clearInterval(timer)
+})
 </script>
 
 <template>
   <main>
-    <p class="day">40 for 40, Day 17</p>
+    <div class="top">
+      <p class="day">40 for 40, Day 17</p>
+      <button v-if="me && !onProfile" class="link" type="button" data-test="profile" @click="showProfile(true)">
+        My profile
+      </button>
+    </div>
     <h1>A bat signal for when the day falls apart.</h1>
 
     <template v-if="step === 'phone' || step === 'code'">
@@ -74,6 +95,14 @@ onUnmounted(() => clearInterval(timer))
 
     <PhoneStep v-if="step === 'phone'" @sent="(p) => { phone = p; step = 'code' }" />
     <CodeStep v-else-if="step === 'code'" :phone="phone" @verified="load" @back="step = 'phone'" />
+    <ProfileView
+      v-else-if="me && onProfile"
+      :person="me.person"
+      @saved="refresh"
+      @signed-out="signedOut"
+      @expired="signedOut"
+      @back="showProfile(false)"
+    />
     <GroupStep v-else-if="step === 'group'" @created="load" @expired="signedOut" />
     <GroupStep
       v-else-if="step === 'home' && me && adding"

@@ -9,12 +9,15 @@ const routes = [
   ["POST", "/verify/start"],
   ["POST", "/verify/check"],
   ["GET", "/me"],
+  ["POST", "/sign-out"],
   ["POST", "/households"],
   ["DELETE", "/households/mine"],
   ["POST", "/signals"],
   ["POST", "/signals/solve"],
   ["POST", "/sms/inbound"],
 ] as const;
+
+const allowed: Record<string, string> = { "/me": "GET, PATCH, DELETE" };
 
 describe("router", () => {
   it.each(routes)("dispatches %s %s to its handler", async (method, path) => {
@@ -25,7 +28,7 @@ describe("router", () => {
   it.each(routes)("answers 405 with Allow for the wrong method on %s %s", async (method, path) => {
     const response = await call(`/day17/api/v1${path}`, { method: method === "GET" ? "POST" : "GET" });
     expect(response.status).toBe(405);
-    expect(response.headers.get("Allow")).toBe(method);
+    expect(response.headers.get("Allow")).toBe(allowed[path] ?? method);
     expect(await response.json()).toEqual({ error: "method_not_allowed" });
   });
 

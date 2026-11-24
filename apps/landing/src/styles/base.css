@@ -35,6 +35,13 @@ main {
   padding: 2rem 1rem 3rem;
 }
 
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .day {
   margin: 0 0 0.5rem;
   font-size: 0.875rem;
@@ -101,6 +108,16 @@ textarea {
   background: var(--night);
   border: 1px solid var(--edge);
   border-radius: 0.5rem;
+}
+
+input:disabled {
+  color: var(--muted);
+  background: var(--panel);
+  cursor: not-allowed;
+}
+
+.hint {
+  font-size: 0.875rem;
 }
 
 input:focus-visible,
