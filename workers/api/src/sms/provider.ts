@@ -6,6 +6,7 @@ export type SendResult = { providerId: string | null };
 export type InboundSms = { from: string; body: string; providerId: string };
 
 export interface SmsProvider {
+  gapMs?: number;
   send(message: OutboundSms): Promise<SendResult>;
   verifyAndParseInbound(request: Request): Promise<InboundSms | null>;
 }

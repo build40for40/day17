@@ -49,15 +49,15 @@ One workflow, `.github/workflows/ci.yml`, built from the shared `build40for40/ac
 - **`SMS_PROVIDER`:** `textbelt` in `wrangler.jsonc`, so a deploy sends real texts. `pnpm dev` and the tests override it to `fake`.
 - **`TEXTBELT_KEY`:** secret, required when the provider is `textbelt`. It's a GitHub secret that CI passes to the Worker.
 - **`ALLOW_FAKE_SMS`:** the fake provider only runs when this is `true`. `pnpm dev` passes it with `--var` and the tests bind it, but a deploy doesn't have it, so a deployed Worker can never fall back to the fake.
-- **`SIGNAL_NUMBER`:** the shared number parents text. Empty while the provider is Textbelt, which has no number to text, so `/me` returns null and the page says it's on its way.
+- **`SIGNAL_NUMBER`:** the shared number parents text. Empty while the provider is Textbelt, which has no number to text, so `/me` returns null and the page leaves the number out.
 
 ## Textbelt
 
 The deployed provider. [Textbelt](https://textbelt.com) sends one text per HTTP call from a shared pool of numbers, paid for in packs of texts.
 
-- **Outbound only.** It can't receive texts outside the US, so `/sms/inbound` always answers 403. Signals are sent, updated and solved from the web page, and a reply or a STOP from a helper never reaches the app.
+- **Outbound only.** It can't receive texts outside the US, so `/sms/inbound` always answers 403. Signals are sent, updated and solved from the web page, and a reply or a STOP from a helper never reaches the app. No text or page promises either: a helper who wants out asks the parent.
 - **No links** in a text until the key is whitelisted on Textbelt's site.
-- **About one text a second** is what Textbelt asks for, and `sendAll` sends a group's texts together, so a big group may see some fail.
+- **About one text a second** is what Textbelt asks for, so `sendAll` sends a group's texts one at a time with the provider's `gapMs` between them. A 10 helper group takes about 10 seconds to go out, inside the request.
 - **Every sign-in code is a paid text.**
 
 ## The fake SMS provider

@@ -28,12 +28,9 @@ async function remove() {
   <div v-if="props.me.household">
     <h2 class="group">{{ props.me.household.name }}</h2>
 
-    <section class="card">
+    <section v-if="props.me.signalNumber" class="card">
       <h3>Your number to text</h3>
-      <p v-if="props.me.signalNumber" class="number" data-test="number">{{ props.me.signalNumber }}</p>
-      <p v-else data-test="number-soon">
-        Your signal number is on its way. Until then, the red button below does the same job.
-      </p>
+      <p class="number" data-test="number">{{ props.me.signalNumber }}</p>
     </section>
 
     <SignalPanel

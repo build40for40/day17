@@ -16,8 +16,8 @@ export function verificationCode(code: string): string {
 
 export function welcome(parentName: string, householdName: string): string {
   return bilingual(
-    `${parentName} picked you as a helper for ${householdName}. When they need a hand you'll get a text from this number. Reply STOP to opt out.`,
-    `${parentName} t'a choisi comme renfort pour ${householdName}. Quand il faut un coup de main, tu recevras un SMS de ce numéro. Réponds STOP pour arrêter.`,
+    `${parentName} picked you as a helper for ${householdName}. When they need a hand you'll get a text from bat signal. Not for you? Ask ${parentName} to take you off the list.`,
+    `${parentName} t'a choisi comme renfort pour ${householdName}. Quand il faut un coup de main, tu recevras un SMS de bat signal. Pas pour toi ? Demande à ${parentName} de te retirer de la liste.`,
   );
 }
 
