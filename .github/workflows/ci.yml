@@ -7,87 +7,58 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  ci:
+  check:
     runs-on: ubuntu-latest
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
+      - uses: build40for40/actions/setup@v1
+        id: setup
       - run: pnpm typecheck
-
       - run: pnpm test
-
       - run: pnpm build
-
-      # The secret is absent on pull requests from forks.
-      - name: Deploy the API
-        if: env.CLOUDFLARE_API_TOKEN != '' && github.event_name == 'push'
-        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
+      - uses: build40for40/actions/preview-worker@v1
         with:
-          apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: workers/api
-          packageManager: pnpm
-          command: deploy
+          api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          working-directory: apps/landing
+          path: /day17/
+          package-manager: ${{ steps.setup.outputs.package-manager }}
 
-      - name: Deploy the landing page
-        if: env.CLOUDFLARE_API_TOKEN != '' && github.event_name == 'push'
-        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
+  deploy:
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    env:
+      SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+      TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+      TEXTBELT_KEY: ${{ secrets.TEXTBELT_KEY }}
+    steps:
+      - uses: build40for40/actions/setup@v1
+        id: setup
+      - run: pnpm build
+      # The API goes first, so the page never calls a route that isn't deployed yet.
+      - uses: build40for40/actions/deploy-worker@v1
         with:
-          apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: apps/landing
-          packageManager: pnpm
-          command: deploy
-
-      # Preview aliases must be a lowercase DNS label short enough to sit before "-day17".
-      - name: Name the preview
-        if: env.CLOUDFLARE_API_TOKEN != '' && github.event_name == 'pull_request'
-        env:
-          BRANCH: ${{ github.head_ref }}
-        run: echo "PREVIEW_ALIAS=$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//' | cut -c1-40 | sed -E 's/-+$//')" >> "$GITHUB_ENV"
-
-      - name: Upload a landing page preview
-        id: preview
-        if: env.CLOUDFLARE_API_TOKEN != '' && github.event_name == 'pull_request'
-        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
+          api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          working-directory: workers/api
+          d1-database: day17
+          secrets: |
+            SESSION_SECRET
+            TURNSTILE_SECRET
+            TEXTBELT_KEY
+          package-manager: ${{ steps.setup.outputs.package-manager }}
+      - uses: build40for40/actions/deploy-worker@v1
         with:
-          apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: apps/landing
-          packageManager: pnpm
-          command: versions upload --preview-alias ${{ env.PREVIEW_ALIAS }}
-
-      - name: Comment the preview link
-        if: steps.preview.outcome == 'success'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          OUTPUT: ${{ steps.preview.outputs.command-output }}
-          PR: ${{ github.event.pull_request.number }}
-          SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          url=$(echo "$OUTPUT" | sed -nE 's/.*Version Preview Alias URL: (https:[^ ]+).*/\1/p' | head -1)
-          [ -n "$url" ] || { echo "::warning::No preview alias URL in the wrangler output."; exit 0; }
-          url="${url%/}/day17/"
-          echo "Preview: $url" >> "$GITHUB_STEP_SUMMARY"
-          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --edit-last --create-if-none --body "Preview of ${SHA::7}: $url"
-
-      - name: Skip deploy
-        if: env.CLOUDFLARE_API_TOKEN == ''
-        run: echo "::notice::Deploy skipped because the CLOUDFLARE_API_TOKEN secret isn't set."
+          api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          working-directory: apps/landing
+          package-manager: ${{ steps.setup.outputs.package-manager }}

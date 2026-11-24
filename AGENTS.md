@@ -20,7 +20,18 @@ A pnpm workspace. Install with `pnpm install` from the root, and add dependencie
 - `pnpm typecheck`, `pnpm test` and `pnpm build` run across the workspace. Tests sit next to the file they cover. `workers/api/src/flow.int.test.ts` runs the whole sign-up and signal flow through the router with the fake provider.
 - `pnpm --filter api migrate` applies `workers/api/migrations/` to the local D1 database in `workers/api/.wrangler/`. Delete that folder to start from an empty database.
 - `pnpm --filter api types` regenerates `worker-configuration.d.ts` after a change to the API's `wrangler.jsonc`.
-- CI runs all of it on every PR, uploads a landing page preview, and deploys both Workers on `main`.
+- CI runs all of it on every PR. See "CI and CD" below.
+
+## CI and CD
+
+One workflow, `.github/workflows/ci.yml`, built from the shared `build40for40/actions`.
+
+- **`check`:** runs on every PR and on `main`. Typecheck, tests and build across the workspace, then a landing page preview with its link commented on the PR. It's the check `main` requires.
+- **`deploy`:** runs on `main` after `check`. It applies the D1 migrations in `workers/api/migrations/` to the remote `day17` database, deploys the API, then deploys the landing page. Deploys queue and never cancel, so a migration is never cut off.
+- **Migrations must be safe for the old code,** since they land a moment before the new Worker does. Add columns and tables first, and drop things in a later change.
+- **Secrets:** a GitHub secret named in the workflow's `secrets:` list is sent to the API Worker with each deploy. One with no value in GitHub is left as it is on the Worker, so a secret set by hand with `pnpm --filter api wrangler secret put` survives. A new secret needs its name in the `env:` block and the `secrets:` list.
+- **Previews are the landing page only.** The API has no preview, so on a preview link the page's API calls fail. Test API changes with `pnpm dev` and the tests.
+- **A new Worker** gets its own `deploy-worker` step in the `deploy` job.
 
 ## Data
 
