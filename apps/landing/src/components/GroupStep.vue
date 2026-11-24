@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { MAX_HELPERS, MAX_NAME_LENGTH, type HelperInput } from 'contract'
+import { MAX_DESCRIPTION_LENGTH, MAX_HELPERS, MAX_NAME_LENGTH, type HelperInput } from 'contract'
 
 import { createHousehold } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
@@ -11,6 +11,7 @@ const emit = defineEmits<{ created: [householdId: string]; expired: []; cancel: 
 
 const parentName = ref(props.knownName ?? '')
 const householdName = ref('')
+const description = ref('')
 let nextId = 0
 const blankHelper = () => ({ id: nextId++, name: '', phone: '' })
 const helpers = ref([blankHelper()])
@@ -24,6 +25,7 @@ const removeHelper = (index: number) => helpers.value.splice(index, 1)
 
 function validate(): { helpers: HelperInput[] } | string {
   if (!parentName.value.trim() || !householdName.value.trim()) return 'Tell us your name and a name for the group.'
+  if (!description.value.trim()) return 'Say what the group is for, so we can tell which asks belong to it.'
   if (helpers.value.length === 0) return 'Add at least one helper. A bat signal needs someone to see it.'
   const cleaned: HelperInput[] = []
   for (const helper of helpers.value) {
@@ -48,6 +50,7 @@ async function submit() {
     const { household } = await createHousehold({
       parentName: parentName.value.trim(),
       householdName: householdName.value.trim(),
+      description: description.value.trim(),
       helpers: result.helpers,
     })
     emit('created', household.id)
@@ -71,6 +74,17 @@ async function submit() {
     <label>
       Name for the group
       <input v-model="householdName" placeholder="The Martin crew" :maxlength="MAX_NAME_LENGTH" data-test="group-name" />
+    </label>
+    <label>
+      What is it for?
+      <textarea
+        v-model="description"
+        rows="2"
+        placeholder="Getting Léa to and from school, and looking after her when we're stuck"
+        :maxlength="MAX_DESCRIPTION_LENGTH"
+        data-test="group-description"
+      />
+      <span class="muted hint">We read this to work out which group an ask is for.</span>
     </label>
 
     <fieldset>

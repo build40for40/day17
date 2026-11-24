@@ -5,7 +5,7 @@ import { MAX_SIGNAL_LENGTH, type RecipientState, type Signal, type SignalRecipie
 import { sendSignal, signOff, solveSignal } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
 
-const props = defineProps<{ householdId: string; openSignal: Signal | null; recipients: SignalRecipient[] }>()
+const props = defineProps<{ householdId: string; groupName?: string; openSignal: Signal; recipients: SignalRecipient[] }>()
 const emit = defineEmits<{ changed: [signal: Signal | null]; expired: [] }>()
 
 const composing = ref(false)
@@ -45,7 +45,7 @@ function send() {
     error.value = 'Say what you need first.'
     return
   }
-  return run(async () => (await sendSignal(props.householdId, body)).signal)
+  return run(async () => (await sendSignal([props.householdId], body)).signals[0] ?? null)
 }
 
 const confirm = (personId: string) => run(async () => (await signOff(props.householdId, personId)).signal)
@@ -58,45 +58,41 @@ const solve = () =>
 </script>
 
 <template>
-  <section class="card signal" :class="{ live: openSignal }">
-    <template v-if="openSignal">
-      <p class="eyebrow" data-test="stage">{{ onIt ? `${onIt.name} is on it` : 'Signal is up' }}</p>
-      <p class="ask" data-test="open-text">{{ openSignal.text }}</p>
-      <ul v-if="recipients.length" class="replies">
-        <li v-for="recipient in recipients" :key="recipient.personId" :class="recipient.signedOff ? 'on-it' : recipient.state" data-test="recipient">
-          <span>{{ recipient.name }}</span>
-          <span class="state">{{ labelFor(recipient) }}</span>
-          <button
-            v-if="recipient.state === 'accepted' && !recipient.signedOff"
-            class="link"
-            type="button"
-            :disabled="busy"
-            data-test="confirm"
-            @click="confirm(recipient.personId)"
-          >
-            {{ onIt ? 'Switch to them' : 'Confirm' }}
-          </button>
-        </li>
-      </ul>
-      <button class="solved" type="button" :disabled="busy" data-test="solve" @click="solve">Solved</button>
-    </template>
+  <section class="card signal live">
+    <p class="eyebrow" data-test="stage">
+      <template v-if="groupName">{{ groupName }}: </template>{{ onIt ? `${onIt.name} is on it` : 'Signal is up' }}
+    </p>
+    <p class="ask" data-test="open-text">{{ openSignal.text }}</p>
+    <ul v-if="recipients.length" class="replies">
+      <li v-for="recipient in recipients" :key="recipient.personId" :class="recipient.signedOff ? 'on-it' : recipient.state" data-test="recipient">
+        <span>{{ recipient.name }}</span>
+        <span class="state">{{ labelFor(recipient) }}</span>
+        <button
+          v-if="recipient.state === 'accepted' && !recipient.signedOff"
+          class="link"
+          type="button"
+          :disabled="busy"
+          data-test="confirm"
+          @click="confirm(recipient.personId)"
+        >
+          {{ onIt ? 'Switch to them' : 'Confirm' }}
+        </button>
+      </li>
+    </ul>
+    <button class="solved" type="button" :disabled="busy" data-test="solve" @click="solve">Solved</button>
 
-    <button v-else-if="!composing" class="red" type="button" data-test="red-button" @click="composing = true">
-      Send the signal
-    </button>
-
-    <button v-if="openSignal && !composing" class="link" type="button" data-test="update" @click="composing = true">
+    <button v-if="!composing" class="link" type="button" data-test="update" @click="composing = true">
       Send an update
     </button>
 
     <form v-if="composing" novalidate @submit.prevent="send">
       <label>
-        {{ openSignal ? 'What is the update?' : 'What do you need?' }}
+        What is the update?
         <textarea
           v-model="text"
           rows="3"
           :maxlength="MAX_SIGNAL_LENGTH"
-          placeholder="Can anyone grab Léa at 5?"
+          placeholder="Make it 5:30"
           data-test="text"
         />
       </label>
@@ -104,7 +100,7 @@ const solve = () =>
       <p v-if="error" class="error" role="alert" data-test="error">{{ error }}</p>
       <div class="row">
         <button class="primary" type="submit" :disabled="busy" data-test="send">
-          {{ openSignal ? 'Send update' : 'Send it' }}
+          Send update
         </button>
         <button class="link" type="button" @click="composing = false">Cancel</button>
       </div>

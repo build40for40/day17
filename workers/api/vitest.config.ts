@@ -12,6 +12,7 @@ export default defineConfig({
         bindings: {
           SMS_PROVIDER: "fake",
           ALLOW_FAKE_SMS: "true",
+          TYPESAFE_API_KEY: "test-typesafe-key",
           TEST_MIGRATIONS: await readD1Migrations(path.join(import.meta.dirname, "migrations")),
         },
       },

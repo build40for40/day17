@@ -358,6 +358,21 @@ footer a {
   border-color: var(--alarm);
 }
 
+.chip .score {
+  margin-left: 0.25rem;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.picker .groups {
+  margin-bottom: 0;
+}
+
+.hint {
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
 .chip.add {
   color: var(--muted);
   background: transparent;

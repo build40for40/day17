@@ -33,7 +33,7 @@ async function call(method: string, path: string, personId: string | null, body?
   });
 }
 
-const valid = (helpers = [{ name: "Gran", phone: GRAN }]) => ({ parentName: "Sam", householdName: "The Martins", helpers });
+const valid = (helpers = [{ name: "Gran", phone: GRAN }]) => ({ parentName: "Sam", householdName: "The Martins", description: "Family pickups and emergencies", helpers });
 const count = async (table: string) => (await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first<{ n: number }>())!.n;
 
 beforeEach(async () => {
@@ -131,6 +131,8 @@ describe("POST /households", () => {
   it.each([
     ["not an object", [], "invalid_request"],
     ["missing helpers", { parentName: "Sam", householdName: "H" }, "invalid_request"],
+    ["missing description", { ...valid(), description: " " }, "invalid_description"],
+    ["long description", { ...valid(), description: "x".repeat(201) }, "invalid_description"],
     ["blank parent name", { ...valid(), parentName: "  " }, "invalid_name"],
     ["long household name", { ...valid(), householdName: "x".repeat(61) }, "invalid_name"],
     ["blank helper name", valid([{ name: "", phone: GRAN }]), "invalid_name"],

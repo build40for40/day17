@@ -27,7 +27,7 @@ export async function seedHousehold(id: string, name: string, owner: FixturePers
   ]);
   return {
     person: { id: owner.id, phone: owner.phone, name: owner.name, opted_out_at: null, created_at: "" },
-    household: { id, name, created_at: "" },
+    household: { id, name, description: "", created_at: "" },
   };
 }
 

@@ -5,6 +5,7 @@ export type ErrorCode =
   | "unsupported_media_type"
   | "invalid_phone"
   | "invalid_name"
+  | "invalid_description"
   | "invalid_code"
   | "turnstile_failed"
   | "rate_limited"
@@ -18,6 +19,7 @@ export type ErrorCode =
   | "signal_too_long"
   | "too_many_signals"
   | "no_open_signal"
+  | "classifier_unavailable"
   | "not_accepted"
   | "not_found"
   | "method_not_allowed"
@@ -48,6 +50,7 @@ export type Helper = {
 export type Household = {
   id: string;
   name: string;
+  description: string;
   createdAt: string;
   helpers: Helper[];
 };
@@ -93,6 +96,7 @@ export type HelperInput = { name: string; phone: string };
 export type CreateHouseholdRequest = {
   parentName: string;
   householdName: string;
+  description: string;
   helpers: HelperInput[];
 };
 export type CreateHouseholdResponse = { household: Household };
@@ -101,8 +105,12 @@ export type AddHelperRequest = HelperInput & { householdId?: string };
 export type AddHelperResponse = { household: Household };
 export type RemoveHelperResponse = { household: Household };
 
-export type CreateSignalRequest = { text: string; householdId?: string };
-export type CreateSignalResponse = { signal: Signal };
+export type CreateSignalRequest = { text: string; householdIds?: string[]; householdId?: string };
+export type CreateSignalResponse = { signals: Signal[] };
+
+export type GroupMatch = { householdId: string; score: number };
+export type MatchSignalRequest = { text: string };
+export type MatchSignalResponse = { matches: GroupMatch[] };
 
 export type SolveSignalRequest = { householdId?: string };
 export type SolveSignalResponse = { signal: Signal };

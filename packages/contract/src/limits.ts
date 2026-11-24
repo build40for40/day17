@@ -5,6 +5,8 @@ export const MAX_HOUSEHOLDS = 5;
 export const MAX_SIGNALS_PER_DAY = 5;
 export const MAX_SIGNAL_LENGTH = 300;
 export const MAX_NAME_LENGTH = 60;
+export const MAX_DESCRIPTION_LENGTH = 200;
+export const MATCH_THRESHOLD = 0.6;
 
 export const CODE_LENGTH = 6;
 export const CODE_TTL_MS = 10 * 60 * 1000;

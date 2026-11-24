@@ -10,6 +10,7 @@ const family: Group = {
   household: {
     id: 'h1',
     name: 'The Martins',
+    description: 'Family pickups and emergencies',
     createdAt: '',
     helpers: [{ id: 'p2', name: 'Nan', phone: '+447700900111', optedOut: false }],
   },
@@ -17,7 +18,7 @@ const family: Group = {
   recipients: [],
 }
 const football: Group = {
-  household: { id: 'h2', name: 'Football', createdAt: '', helpers: [{ id: 'p3', name: 'Coach', phone: '+447700900112', optedOut: false }] },
+  household: { id: 'h2', name: 'Football', description: 'Sunday football parents', createdAt: '', helpers: [{ id: 'p3', name: 'Coach', phone: '+447700900112', optedOut: false }] },
   openSignal: null,
   recipients: [],
 }
@@ -66,24 +67,24 @@ describe('HomeView', () => {
     expect(wrapper.get('[data-test="add-group"]').text()).toContain('New group')
   })
 
-  it('switches between groups and sends the signal to the one on screen', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(Response.json({ signal: {} }, { status: 201 }))
-    vi.stubGlobal('fetch', fetchMock)
+  it('switches between groups to show their helpers', async () => {
     const wrapper = mount(HomeView, { props: { me: me(null, [family, football]) } })
     expect(wrapper.get('[data-test="group-name"]').text()).toBe('The Martins')
 
     await wrapper.findAll('[data-test="group-tab"]')[1]!.trigger('click')
+
     expect(wrapper.get('[data-test="group-name"]').text()).toBe('Football')
+    expect(wrapper.get('[data-test="group-description"]').text()).toBe('Sunday football parents')
     expect(wrapper.text()).toContain('Coach')
     expect(wrapper.text()).not.toContain('Nan')
+  })
 
-    await wrapper.get('[data-test="red-button"]').trigger('click')
-    await wrapper.get('[data-test="text"]').setValue("Who's playing at 10?")
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
+  it('has one red button however many groups there are, and a panel per open signal', () => {
+    const signal = { id: 's1', householdId: 'h2', text: 'Kit needed', source: 'web' as const, status: 'open' as const, openedAt: '', solvedAt: null, signedOffPersonId: null }
+    const wrapper = mount(HomeView, { props: { me: me(null, [family, { ...football, openSignal: signal }]) } })
 
-    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ householdId: 'h2', text: "Who's playing at 10?" })
-    expect(wrapper.emitted('changed')).toHaveLength(1)
+    expect(wrapper.findAll('[data-test="red-button"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-test="stage"]').map((stage) => stage.text())).toEqual(['Football: Signal is up'])
   })
 
   it('jumps to a group that was just added', async () => {

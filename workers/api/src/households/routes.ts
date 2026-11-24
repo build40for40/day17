@@ -1,4 +1,5 @@
 import {
+  MAX_DESCRIPTION_LENGTH,
   MAX_HELPERS,
   MAX_HOUSEHOLDS,
   MAX_NAME_LENGTH,
@@ -27,7 +28,7 @@ import { listRecipients, toSignalRecipient } from "../signals/recipients";
 import { canReply } from "../signals/signals";
 
 type ValidHelper = { name: string; phone: string };
-type ValidRequest = { parentName: string; householdName: string; helpers: ValidHelper[] };
+type ValidRequest = { parentName: string; householdName: string; description: string; helpers: ValidHelper[] };
 type Validation = { ok: true; value: ValidRequest } | { ok: false; response: Response };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -39,6 +40,12 @@ const cleanName = (value: unknown): string | null => {
   return name.length > 0 && name.length <= MAX_NAME_LENGTH ? name : null;
 };
 
+const cleanDescription = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const description = value.trim().replace(/\s+/g, " ");
+  return description.length > 0 && description.length <= MAX_DESCRIPTION_LENGTH ? description : null;
+};
+
 function validate(data: unknown, parentPhone: string, signalNumber: string | null): Validation {
   const fail = (code: Parameters<typeof error>[0], status = 400) => ({ ok: false, response: error(code, status) }) as const;
   if (!isRecord(data) || !Array.isArray(data.helpers)) return fail("invalid_request");
@@ -46,6 +53,8 @@ function validate(data: unknown, parentPhone: string, signalNumber: string | nul
   const parentName = cleanName(data.parentName);
   const householdName = cleanName(data.householdName);
   if (!parentName || !householdName) return fail("invalid_name");
+  const description = cleanDescription(data.description);
+  if (!description) return fail("invalid_description");
   if (data.helpers.length > MAX_HELPERS) return fail("too_many_helpers");
 
   const helpers: ValidHelper[] = [];
@@ -61,7 +70,7 @@ function validate(data: unknown, parentPhone: string, signalNumber: string | nul
     seen.add(phone);
     helpers.push({ name, phone });
   }
-  return { ok: true, value: { parentName, householdName, helpers } };
+  return { ok: true, value: { parentName, householdName, description, helpers } };
 }
 
 async function findPerson(env: Env, personId: string): Promise<PersonRow | null> {
@@ -90,6 +99,7 @@ async function loadHousehold(env: Env, row: HouseholdRow): Promise<Household> {
   return {
     id: row.id,
     name: row.name,
+    description: row.description,
     createdAt: row.created_at,
     helpers: results.map((helper) => ({
       id: helper.id,
@@ -139,7 +149,7 @@ export const handleCreateHousehold: Handler = async (request, env) => {
   if (!body.ok) return body.response;
   const validation = validate(body.data, person.phone, env.SIGNAL_NUMBER ? normalisePhone(env.SIGNAL_NUMBER) : null);
   if (!validation.ok) return validation.response;
-  const { parentName, householdName, helpers } = validation.value;
+  const { parentName, householdName, description, helpers } = validation.value;
 
   if ((await loadOwnedHouseholds(env, person.id)).length >= MAX_HOUSEHOLDS) return error("too_many_households", 409);
   if (!(await take(env.DB, limits.household(person.phone)))) return error("rate_limited", 429);
@@ -153,7 +163,7 @@ export const handleCreateHousehold: Handler = async (request, env) => {
 
   await env.DB.batch([
     env.DB.prepare("UPDATE people SET name = ? WHERE id = ?").bind(parentName, person.id),
-    env.DB.prepare("INSERT INTO households (id, name) VALUES (?, ?)").bind(householdId, householdName),
+    env.DB.prepare("INSERT INTO households (id, name, description) VALUES (?, ?, ?)").bind(householdId, householdName, description),
     env.DB.prepare("INSERT INTO memberships (household_id, person_id, role) VALUES (?, ?, 'owner')").bind(
       householdId,
       person.id,
