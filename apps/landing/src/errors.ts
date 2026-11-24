@@ -8,7 +8,7 @@ export const errorMessages: Record<ErrorCode | 'network', string> = {
   invalid_request: "That didn't look right. Check the fields and try again.",
   payload_too_large: 'That is a lot of text. Trim it down a bit.',
   unsupported_media_type: 'Something went sideways on our end. Give it another go.',
-  invalid_phone: "That number doesn't look right. Check the country code and the digits.",
+  invalid_phone: "That doesn't look like a UK mobile number. Check the digits.",
   invalid_name: 'Everyone needs a name, and not a novel. Keep it short.',
   invalid_description: `Say what the group is for, in under ${MAX_DESCRIPTION_LENGTH} characters.`,
   invalid_code: "That code doesn't match. Have another look at the text.",

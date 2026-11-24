@@ -40,7 +40,7 @@ function validate(): { helpers: HelperInput[] } | string {
   for (const helper of helpers.value) {
     const name = helper.name.trim()
     if (!name) return 'Everyone needs a name.'
-    if (!helper.phone) return `${name}'s number doesn't look like a phone number. Check the country code and the digits.`
+    if (!helper.phone) return `${name}'s number doesn't look like a UK mobile number. Check the digits.`
     cleaned.push({ name, phone: helper.phone })
   }
   if (new Set(cleaned.map((h) => h.phone)).size !== cleaned.length) return 'The same number is on your list twice.'

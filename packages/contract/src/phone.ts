@@ -2,7 +2,6 @@ const E164 = /^\+[1-9]\d{7,14}$/;
 
 export const COUNTRIES = [
   { iso: "GB", dial: "44", name: "United Kingdom", flag: "🇬🇧", example: "7700 900123" },
-  { iso: "FR", dial: "33", name: "France", flag: "🇫🇷", example: "6 12 34 56 78" },
 ] as const;
 
 export type Country = (typeof COUNTRIES)[number];
@@ -27,7 +26,7 @@ export function normalisePhone(input: string): string | null {
   else if (compact.startsWith("00")) phone = `+${compact.slice(2)}`;
   else return null;
 
-  // "+44 (0)7700 900123" and "+33 (0)6 12 34 56 78" keep the trunk zero once the brackets are gone.
+  // "+44 (0)7700 900123" keeps the trunk zero once the brackets are gone.
   const country = countryOf(phone);
   if (!country) return null;
   const national = phone.slice(country.dial.length + 1).replace(/^0/, "");

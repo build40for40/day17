@@ -27,7 +27,6 @@ describe('HelpersCard', () => {
 
     await wrapper.get('[data-test="add-helper"]').trigger('click')
     await wrapper.get('[data-test="helper-name"]').setValue(' Nan ')
-    await wrapper.get('[data-test="country"]').setValue('GB')
     await wrapper.get('[data-test="phone"]').setValue('7700 900111')
     await wrapper.get('[data-test="add-helper-form"]').trigger('submit')
     await flushPromises()
@@ -75,7 +74,6 @@ describe('HelpersCard', () => {
 
     await wrapper.get('[data-test="add-helper"]').trigger('click')
     await wrapper.get('[data-test="helper-name"]').setValue('Nan')
-    await wrapper.get('[data-test="country"]').setValue('GB')
     await wrapper.get('[data-test="phone"]').setValue('7700 900199')
     await wrapper.get('[data-test="add-helper-form"]').trigger('submit')
     await flushPromises()
@@ -111,7 +109,6 @@ describe('HelpersCard', () => {
 
     await wrapper.get('[data-test="add-helper"]').trigger('click')
     await wrapper.get('[data-test="helper-name"]').setValue('Nan')
-    await wrapper.get('[data-test="country"]').setValue('GB')
     await wrapper.get('[data-test="phone"]').setValue('07700 900100')
     await wrapper.get('[data-test="add-helper-form"]').trigger('submit')
 

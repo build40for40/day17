@@ -14,7 +14,7 @@ describe('PhoneStep', () => {
     await wrapper.get('[data-test="phone"]').setValue('nope')
     await wrapper.get('form').trigger('submit')
 
-    expect(wrapper.get('[data-test="error"]').text()).toContain("doesn't look right")
+    expect(wrapper.get('[data-test="error"]').text()).toContain('UK mobile number')
     expect(fetchMock).not.toHaveBeenCalled()
   })
 

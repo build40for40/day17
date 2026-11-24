@@ -263,6 +263,18 @@ legend {
   font-weight: 400;
 }
 
+.phone-field .dial {
+  display: grid;
+  place-items: center;
+  padding: 0 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: #f4f0f6;
+  border: 2px solid var(--line);
+  border-radius: 0.9rem;
+}
+
 .phone-field select {
   width: auto;
   font-variant-numeric: tabular-nums;
