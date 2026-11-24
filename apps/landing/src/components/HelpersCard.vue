@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { MAX_HELPERS, MAX_NAME_LENGTH, type Helper, type Household } from 'contract'
+import { computed, ref } from 'vue'
+import { MAX_HELPERS, MAX_NAME_LENGTH, type Helper, type HelperInput, type Household } from 'contract'
 
 import { addHelper, removeHelper } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
 import PhoneField from './PhoneField.vue'
 
 // alsoIn maps a helper's phone to the names of the parent's other groups they're in.
-const props = defineProps<{ household: Household; alsoIn?: Record<string, string[]> }>()
+const props = defineProps<{ household: Household; alsoIn?: Record<string, string[]>; known?: HelperInput[] }>()
 const emit = defineEmits<{ changed: []; expired: [] }>()
 
 const adding = ref(false)
@@ -16,6 +16,10 @@ const phone = ref('')
 const removingId = ref('')
 const error = ref('')
 const busy = ref(false)
+
+const pickable = computed(() =>
+  (props.known ?? []).filter((person) => !props.household.helpers.some((helper) => helper.phone === person.phone)),
+)
 
 function startAdding() {
   adding.value = true
@@ -60,8 +64,15 @@ function add() {
     error.value = `${cleaned}'s number doesn't look like a phone number. Check the country code and the digits.`
     return
   }
+  const already = props.household.helpers.find((helper) => helper.phone === phone.value)
+  if (already) {
+    error.value = `That number is already in this group, as ${already.name}.`
+    return
+  }
   void run(() => addHelper(props.household.id, { name: cleaned, phone: phone.value }), stopAdding)
 }
+
+const addKnown = (person: HelperInput) => run(() => addHelper(props.household.id, person), stopAdding)
 
 const remove = (helper: Helper) =>
   run(
@@ -103,6 +114,23 @@ const remove = (helper: Helper) =>
 
     <form v-if="adding" class="helper" novalidate data-test="add-helper-form" @submit.prevent="add">
       <p class="muted">We'll text them once to say hello.</p>
+      <div v-if="pickable.length" class="known" data-test="known-people">
+        <span>From your other groups</span>
+        <div class="row">
+          <button
+            v-for="person in pickable"
+            :key="person.phone"
+            class="pick"
+            type="button"
+            :disabled="busy"
+            data-test="known-person"
+            @click="addKnown(person)"
+          >
+            + {{ person.name }}
+          </button>
+        </div>
+        <span>Or someone new</span>
+      </div>
       <input v-model="name" placeholder="Name" aria-label="Helper name" :maxlength="MAX_NAME_LENGTH" data-test="helper-name" />
       <PhoneField v-model="phone" label="Helper phone" />
       <div class="row">

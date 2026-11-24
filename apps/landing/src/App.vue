@@ -9,6 +9,7 @@ import HomeView from './components/HomeView.vue'
 import PhoneStep from './components/PhoneStep.vue'
 import ProfileView from './components/ProfileView.vue'
 import { messageFor } from './errors'
+import { knownPeople } from './people'
 import scenePickup from './assets/scene-pickup.jpg'
 import sceneBabysitting from './assets/scene-babysitting.jpg'
 import sceneGp from './assets/scene-gp.jpg'
@@ -134,6 +135,7 @@ onUnmounted(() => {
     <GroupStep
       v-else-if="step === 'home' && me && adding"
       :known-name="me.person.name"
+      :known="knownPeople(me.groups)"
       @created="(id) => { startAt = id; void load() }"
       @expired="signedOut"
       @cancel="adding = false"

@@ -84,6 +84,27 @@ describe('GroupStep', () => {
     expect(wrapper.emitted('expired')).toHaveLength(1)
   })
 
+  it('fills a row from someone in another group and stops offering them', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ household: { id: 'h2' } }, { status: 201 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const known = [
+      { name: 'Nan', phone: '+447700900111' },
+      { name: 'Sue', phone: '+447700900112' },
+    ]
+    const wrapper = mount(GroupStep, { props: { knownName: 'Sam', known } })
+
+    await wrapper.findAll('[data-test="known-person"]')[0]!.trigger('click')
+    expect(wrapper.findAll('[data-test="helper-row"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-test="known-person"]').map((pick) => pick.text())).toEqual(['+ Sue'])
+
+    await wrapper.get('[data-test="group-name"]').setValue('Football')
+    await wrapper.get('[data-test="group-description"]').setValue('Saturday matches')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body).helpers).toEqual([{ name: 'Nan', phone: '+447700900111' }])
+  })
+
   it('hides the name field and offers cancel when adding another group', async () => {
     const wrapper = mount(GroupStep, { props: { knownName: 'Sam' } })
 

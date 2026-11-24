@@ -76,13 +76,47 @@ describe('HelpersCard', () => {
     await wrapper.get('[data-test="add-helper"]').trigger('click')
     await wrapper.get('[data-test="helper-name"]').setValue('Nan')
     await wrapper.get('[data-test="country"]').setValue('GB')
-    await wrapper.get('[data-test="phone"]').setValue('7700 900100')
+    await wrapper.get('[data-test="phone"]').setValue('7700 900199')
     await wrapper.get('[data-test="add-helper-form"]').trigger('submit')
     await flushPromises()
 
     expect(wrapper.get('[data-test="helper-error"]').text()).toContain('twice')
     expect(wrapper.find('[data-test="add-helper-form"]').exists()).toBe(true)
     expect(wrapper.emitted('changed')).toBeUndefined()
+  })
+
+  it('adds someone from another group in one tap and only offers people not in this one', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ household: household(2) }, { status: 201 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const known = [
+      { name: 'Helper 0', phone: '+447700900100' },
+      { name: 'Sue', phone: '+447700900150' },
+    ]
+    const wrapper = mount(HelpersCard, { props: { household: household(), known } })
+
+    await wrapper.get('[data-test="add-helper"]').trigger('click')
+    const picks = wrapper.findAll('[data-test="known-person"]')
+    expect(picks.map((pick) => pick.text())).toEqual(['+ Sue'])
+    await picks[0]!.trigger('click')
+    await flushPromises()
+
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ householdId: 'h1', name: 'Sue', phone: '+447700900150' })
+    expect(wrapper.emitted('changed')).toHaveLength(1)
+  })
+
+  it("won't send a number that's already in the group", async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const wrapper = mount(HelpersCard, { props: { household: household() } })
+
+    await wrapper.get('[data-test="add-helper"]').trigger('click')
+    await wrapper.get('[data-test="helper-name"]').setValue('Nan')
+    await wrapper.get('[data-test="country"]').setValue('GB')
+    await wrapper.get('[data-test="phone"]').setValue('07700 900100')
+    await wrapper.get('[data-test="add-helper-form"]').trigger('submit')
+
+    expect(wrapper.get('[data-test="helper-error"]').text()).toContain('already in this group, as Helper 0')
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('hides the add button when the group is full', () => {
