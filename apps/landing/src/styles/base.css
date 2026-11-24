@@ -164,6 +164,15 @@ legend {
   gap: 0.25rem 1rem;
 }
 
+.helpers .confirm {
+  flex-basis: 100%;
+}
+
+.helpers + .link,
+.helpers + form {
+  margin-top: 0.75rem;
+}
+
 .muted {
   color: var(--muted);
 }

@@ -1,10 +1,13 @@
 import {
   API_BASE,
+  type AddHelperResponse,
   type CreateHouseholdRequest,
   type CreateHouseholdResponse,
   type CreateSignalResponse,
   type ErrorCode,
+  type HelperInput,
   type MeResponse,
+  type RemoveHelperResponse,
   type SignOffResponse,
   type SolveSignalResponse,
 } from 'contract'
@@ -50,6 +53,15 @@ export const createHousehold = (input: CreateHouseholdRequest) =>
 
 export const deleteHousehold = (householdId: string) =>
   request<void>('DELETE', `/households/mine?id=${encodeURIComponent(householdId)}`)
+
+export const addHelper = (householdId: string, helper: HelperInput) =>
+  request<AddHelperResponse>('POST', '/households/helpers', { householdId, ...helper })
+
+export const removeHelper = (householdId: string, personId: string) =>
+  request<RemoveHelperResponse>(
+    'DELETE',
+    `/households/helpers?personId=${encodeURIComponent(personId)}&id=${encodeURIComponent(householdId)}`,
+  )
 
 export const sendSignal = (householdId: string, text: string) =>
   request<CreateSignalResponse>('POST', '/signals', { householdId, text })

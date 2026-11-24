@@ -4,6 +4,7 @@ import { MAX_HOUSEHOLDS, type MeResponse } from 'contract'
 
 import { deleteHousehold } from '../api'
 import { isUnauthorized, messageFor } from '../errors'
+import HelpersCard from './HelpersCard.vue'
 import SignalPanel from './SignalPanel.vue'
 
 const props = defineProps<{ me: MeResponse; startAt?: string }>()
@@ -88,15 +89,12 @@ async function remove() {
       @expired="emit('expired')"
     />
 
-    <section class="card">
-      <h3>Your helpers</h3>
-      <ul class="helpers">
-        <li v-for="helper in group.household.helpers" :key="helper.id">
-          <span>{{ helper.name }}</span>
-          <span class="muted">{{ helper.phone }}<template v-if="helper.optedOut"> (said STOP)</template></span>
-        </li>
-      </ul>
-    </section>
+    <HelpersCard
+      :key="group.household.id"
+      :household="group.household"
+      @changed="emit('changed')"
+      @expired="emit('expired')"
+    />
 
     <section class="danger">
       <button v-if="!confirming" class="link quiet" type="button" data-test="delete" @click="confirming = true">
